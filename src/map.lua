@@ -82,7 +82,6 @@ function map.read_entry(index)
     end
 
     local base = map.table_ptr + (index * ENTRY_SIZE)
-    -- fields per your struct layout
     local zone = mem.read_uint16(base + 0x00)
     local floorId = mem.read_uint8(base + 0x02)
     local floorIndex = mem.read_uint8(base + 0x03)
@@ -199,7 +198,7 @@ function map.get_player_position()
     return nil, nil, nil
 end
 
--- Get the current map entry for the player (with proper floor detection)
+-- Get the current map entry for the player
 function map.get_current_map()
     local zoneId = map.get_player_zone()
     if not zoneId then return nil, 'no zone' end

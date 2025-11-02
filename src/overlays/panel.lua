@@ -1,14 +1,14 @@
-local settings_panel = {}
+local panel = {}
 
 local imgui = require('imgui')
 local settings = require('settings')
 
 -- Panel state
-settings_panel.width = 200
+panel.width = 200
 
 -- Draw the settings panel on the right side
-function settings_panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
-    local panelWidth = settings_panel.width
+function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
+    local panelWidth = panel.width
     local toggleButtonWidth = 20
     local buttonSpacing = 5 -- Space between button and panel
     local isPanelVisible = config.settingsPanelVisible[1]
@@ -50,21 +50,15 @@ function settings_panel.draw(config, windowPosX, windowPosY, contentMinX, conten
     drawList:AddText({ textX, textY }, buttonTextColor, buttonText)
 
     -- Create a small window for the toggle button to capture clicks
-    imgui.SetNextWindowPos({ toggleButtonX, toggleButtonY })
-    imgui.SetNextWindowSize({ toggleButtonWidth, 60 })
-    imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 })
-    imgui.PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0)
-    imgui.PushStyleColor(ImGuiCol_WindowBg, { 0, 0, 0, 0 })
-
-    imgui.Begin('##SettingsToggle', true, bit.bor(ImGuiWindowFlags_NoTitleBar, ImGuiWindowFlags_NoResize, ImGuiWindowFlags_NoMove, ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoCollapse))
-    if imgui.InvisibleButton('##ToggleBtn', { toggleButtonWidth, 60 }) then
-        config.settingsPanelVisible[1] = not isPanelVisible
-        settings.save()
+    imgui.SetCursorPos({ toggleButtonX - windowPosX, toggleButtonY - windowPosY })
+    
+    if imgui.BeginChild('##PanelToggle', { toggleButtonWidth, 60 }, false, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoBackground)) then
+        if imgui.InvisibleButton('##ToggleBtn', { toggleButtonWidth, 60 }) then
+            config.settingsPanelVisible[1] = not isPanelVisible
+            settings.save()
+        end
     end
-    imgui.End()
-
-    imgui.PopStyleColor(1)
-    imgui.PopStyleVar(2)
+    imgui.EndChild()
 
     -- Draw panel if visible
     if isPanelVisible then
@@ -87,12 +81,9 @@ function settings_panel.draw(config, windowPosX, windowPosY, contentMinX, conten
         )
 
         -- Create an invisible window for the panel widgets
-        imgui.SetNextWindowPos({ panelX, panelY })
-        imgui.SetNextWindowSize({ panelWidth, panelHeight })
-        imgui.PushStyleColor(ImGuiCol_WindowBg, { 0, 0, 0, 0 })
-        imgui.PushStyleColor(ImGuiCol_Border, { 0, 0, 0, 0 })
+        imgui.SetCursorPos({ panelX - windowPosX, panelY - windowPosY })
 
-        if imgui.Begin('SettingsPanelContent', true, bit.bor(ImGuiWindowFlags_NoTitleBar, ImGuiWindowFlags_NoResize, ImGuiWindowFlags_NoMove, ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoCollapse)) then
+        if imgui.BeginChild('##Panel', { panelWidth, panelHeight }, false, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoBackground)) then
             imgui.Text('Display Options')
             imgui.Spacing()
             imgui.Separator()
@@ -112,12 +103,9 @@ function settings_panel.draw(config, windowPosX, windowPosY, contentMinX, conten
                 settings.save()
             end
             imgui.Spacing()
-
-            imgui.End()
         end
-
-        imgui.PopStyleColor(2)
+        imgui.EndChild()
     end
 end
 
-return settings_panel
+return panel

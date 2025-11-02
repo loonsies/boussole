@@ -69,7 +69,6 @@ end)
 
 ashita.events.register('packet_in', 'packet_in_cb', function (e)
     if (e.id == 0x000A) then
-        -- Check if this is a zone change (not just login confirmation)
         if (struct.unpack('b', e.data_modified, 0x80 + 0x01) == 1) then
             map.clear_map_cache()
             return

@@ -2,11 +2,9 @@ local warp_points = {}
 
 local chat = require('chat')
 
--- Cached warp point data
 warp_points.homepoints = {}
 warp_points.survival_guides = {}
 
--- Simple XML parser for reading entry elements
 local function parse_warp_xml(content)
     local entries = {}
 
