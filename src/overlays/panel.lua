@@ -51,7 +51,7 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
 
     -- Create a small window for the toggle button to capture clicks
     imgui.SetCursorPos({ toggleButtonX - windowPosX, toggleButtonY - windowPosY })
-    
+
     if imgui.BeginChild('##PanelToggle', { toggleButtonWidth, 60 }, false, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoBackground)) then
         if imgui.InvisibleButton('##ToggleBtn', { toggleButtonWidth, 60 }) then
             config.settingsPanelVisible[1] = not isPanelVisible
