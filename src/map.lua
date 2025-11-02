@@ -1,6 +1,5 @@
 local map = {}
 
-local ashita = ashita
 local mem = ashita.memory
 local ffi = require('ffi')
 

@@ -6,6 +6,7 @@ addon.link = 'https://github.com/loonsies/boussole'
 
 require 'common'
 
+local chat = require('chat')
 local settings = require('settings')
 local commands = require('src/commands')
 local config = require('src/config')
