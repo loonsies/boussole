@@ -46,6 +46,7 @@ function ui.load_map_texture()
     end
 
     ui.texture_id = gcTexture
+    ui.texture_ptr = nil -- Will be set on first draw
     ui.map_texture = texture_data
 
     return true

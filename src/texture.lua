@@ -472,7 +472,7 @@ function texture.load_texture_to_d3d(datData, d3d8dev)
     -- Unlock the texture
     dx_texture:UnlockRect(0)
 
-    local gcTexture = d3d8.gc_safe_release(ffi.new('IDirect3DBaseTexture8*', dx_texture))
+    local gcTexture = d3d8.gc_safe_release(ffi.cast('IDirect3DBaseTexture8*', dx_texture))
 
     return gcTexture, texture_data, nil
 end

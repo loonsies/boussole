@@ -3,7 +3,6 @@ local map = {}
 local ashita = ashita
 local mem = ashita.memory
 local ffi = require('ffi')
-local dats = require('ffxi.dats')
 
 local MAP_TABLE_SIG = '8A0D????????5333C05684C95774??8A5424188B7424148B7C2410B9'
 local ENTRY_SIZE = 0x0E
@@ -59,19 +58,14 @@ function map.get_floor_id(x, y, z)
         if not ok then return nil, err end
     end
 
-    -- Reread this pointer each time (points to g_pTsZoneMap)
-    local ptr_to_ptr = mem.read_uint32(map.floor_this_ptr)
-    if ptr_to_ptr == 0 then
-        return nil, 'g_pTsZoneMap pointer address is null'
-    end
-
-    -- dereference to get g_pTsZoneMap object pointer
-    local this_ptr_val = mem.read_uint32(ptr_to_ptr)
+    -- Read the pointer to g_pTsZoneMap
+    local this_ptr_val = mem.read_uint32(map.floor_this_ptr)
     if this_ptr_val == 0 then
         return nil, 'g_pTsZoneMap is null'
     end
 
-    local this_obj = ffi.cast('void*', mem.read_uint32(this_ptr_val))
+    -- Cast the pointer value to void* for the thiscall
+    local this_obj = ffi.cast('void*', this_ptr_val)
     if this_obj == nil then
         return nil, 'g_pTsZoneMap object is null'
     end
