@@ -18,6 +18,8 @@ local warp_points = require('src/warp_points')
 boussole = {
     config = {},
     visible = { false },
+    last_floor_id = nil,
+    last_floor_check_time = 0,
 }
 
 ashita.events.register('load', 'load_cb', function ()
@@ -39,6 +41,14 @@ ashita.events.register('load', 'load_cb', function ()
         local mapData, err = map.load_current_map_dat()
         if mapData then
             ui.load_map_texture()
+            -- Store initial floor ID
+            local x, y, z = map.get_player_position()
+            if x then
+                local floor_id = map.get_floor_id(x, y, z)
+                if floor_id then
+                    boussole.last_floor_id = floor_id
+                end
+            end
         else
             print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
             map.clear_map_cache()
@@ -53,6 +63,31 @@ ashita.events.register('unload', 'unload_cb', function ()
 end)
 
 ashita.events.register('d3d_present', 'd3d_present_cb', function ()
+    -- Check for floor changes every 1 second
+    local current_time = os.clock()
+    if current_time - boussole.last_floor_check_time >= 1.0 then
+        boussole.last_floor_check_time = current_time
+
+        local x, y, z = map.get_player_position()
+        if x then
+            local current_floor_id = map.get_floor_id(x, y, z)
+            if current_floor_id and boussole.last_floor_id and current_floor_id ~= boussole.last_floor_id then
+                -- Floor changed, reload map
+                boussole.last_floor_id = current_floor_id
+                local mapData, err = map.load_current_map_dat()
+                if mapData then
+                    ui.load_map_texture()
+                else
+                    print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
+                    map.clear_map_cache()
+                    ui.load_nomap_texture()
+                end
+            elseif current_floor_id then
+                boussole.last_floor_id = current_floor_id
+            end
+        end
+    end
+
     ui.update()
 end)
 
@@ -77,6 +112,7 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
     if (e.id == 0x000A) then
         if (struct.unpack('b', e.data_modified, 0x80 + 0x01) == 1) then
             map.clear_map_cache()
+            boussole.last_floor_id = nil
             return
         end
 
@@ -85,10 +121,19 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
             local mapData, err = map.load_current_map_dat()
             if mapData then
                 ui.load_map_texture()
+                -- Update floor ID after zone change
+                local x, y, z = map.get_player_position()
+                if x then
+                    local floor_id = map.get_floor_id(x, y, z)
+                    if floor_id then
+                        boussole.last_floor_id = floor_id
+                    end
+                end
             else
                 print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
                 map.clear_map_cache()
                 ui.load_nomap_texture()
+                boussole.last_floor_id = nil
             end
         end)
     end
