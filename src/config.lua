@@ -7,6 +7,11 @@ local default = T {
     showSurvivalGuides = { true },
     showPlayer = { true },
     settingsPanelVisible = { false },
+    mapView = {
+        offsetX = 0,
+        offsetY = 0,
+        zoom = 1.0,
+    },
 }
 
 config.load = function ()

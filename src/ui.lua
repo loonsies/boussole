@@ -24,6 +24,24 @@ ui.drag_start = { x = 0, y = 0 }
 ui.window_bounds = nil    -- Window content area bounds for mouse blocking
 ui.window_focused = false -- Whether our window has focus
 
+-- Restore map view state from config
+function ui.restore_view_state()
+    if boussole.config.mapView then
+        ui.map_offset.x = boussole.config.mapView.offsetX or 0
+        ui.map_offset.y = boussole.config.mapView.offsetY or 0
+        ui.map_zoom = boussole.config.mapView.zoom or 1.0
+    end
+end
+
+-- Save current map view state to config
+function ui.save_view_state()
+    boussole.config.mapView = {
+        offsetX = ui.map_offset.x,
+        offsetY = ui.map_offset.y,
+        zoom = ui.map_zoom,
+    }
+end
+
 function ui.load_map_texture()
     -- Clean up old texture
     if ui.texture_id then
@@ -55,7 +73,8 @@ function ui.load_map_texture()
     end
 
     ui.texture_id = gcTexture
-    ui.texture_ptr = nil -- Will be set on first draw
+    ui.texture_ptr = nil
+
     ui.map_texture = {
         width = texture_data.width,
         height = texture_data.height,
@@ -66,6 +85,37 @@ function ui.load_map_texture()
 
     collectgarbage('collect')
 
+    return true
+end
+
+function ui.load_nomap_texture()
+    -- Clean up old texture
+    if ui.texture_id then
+        ui.texture_id = nil
+    end
+
+    local d3d8dev = d3d8.get_device()
+    local nomap_path = string.format('%saddons\\boussole\\assets\\nomap.png', AshitaCore:GetInstallPath())
+
+    local gcTexture, texture_data, err = texture_module.load_texture_from_file(nomap_path, d3d8dev)
+
+    if not gcTexture then
+        print(chat.header(addon.name):append(chat.error(string.format('Failed to load nomap.png: %s', err))))
+        return false
+    end
+
+    ui.texture_id = gcTexture
+    ui.texture_ptr = nil
+
+    ui.map_texture = {
+        width = texture_data.width,
+        height = texture_data.height,
+        type = texture_data.type
+    }
+
+    texture_data = nil
+
+    collectgarbage('collect')
     return true
 end
 

@@ -28,8 +28,11 @@ ashita.events.register('load', 'load_cb', function ()
     -- Initialize warp point data
     warp_points.init()
 
+    ui.restore_view_state()
+
     settings.register('settings', 'settings_update_cb', function (newConfig)
         boussole.config = newConfig
+        ui.restore_view_state()
     end)
 
     ashita.tasks.once(1, function ()
@@ -37,12 +40,15 @@ ashita.events.register('load', 'load_cb', function ()
         if mapData then
             ui.load_map_texture()
         else
-            print(chat.header(addon.name):append(chat.error(string.format('Failed to load map data: %s', tostring(err)))))
+            print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
+            map.clear_map_cache()
+            ui.load_nomap_texture()
         end
     end)
 end)
 
 ashita.events.register('unload', 'unload_cb', function ()
+    ui.save_view_state()
     settings.save()
 end)
 
@@ -80,7 +86,9 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
             if mapData then
                 ui.load_map_texture()
             else
-                print(chat.header(addon.name):append(chat.error(string.format('Failed to load map data: %s', tostring(err)))))
+                print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
+                map.clear_map_cache()
+                ui.load_nomap_texture()
             end
         end)
     end

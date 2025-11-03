@@ -23,6 +23,8 @@ ffi.cdef [[
     typedef struct {
         uint8_t b, g, r, a;
     } Color;
+
+    int32_t D3DXCreateTextureFromFileA(void* pDevice, const char* pSrcFile, void** ppTexture);
 ]]
 
 -- Image types
@@ -554,6 +556,36 @@ function texture.load_uncompressed_texture(d3d8dev, texture_data)
     -- Clear pixel data
     texture_data.pixels = nil
     texture_data = nil
+
+    return gcTexture, result, nil
+end
+
+function texture.load_texture_from_file(filePath, d3d8dev)
+    local texture_ptr = ffi.new('IDirect3DTexture8*[1]')
+    local hr = ffi.C.D3DXCreateTextureFromFileA(d3d8dev, filePath, texture_ptr)
+
+    if hr ~= ffi.C.S_OK or texture_ptr[0] == nil then
+        return nil, nil, string.format('D3DXCreateTextureFromFileA failed: 0x%08X', hr)
+    end
+
+    local gcTexture = d3d8.gc_safe_release(ffi.cast('IDirect3DBaseTexture8*', texture_ptr[0]))
+
+    -- Get texture dimensions
+    local _, desc = ffi.cast('IDirect3DTexture8*', texture_ptr[0]):GetLevelDesc(0)
+
+    -- Extract file extension for type
+    local fileType = filePath:match('%.([^%.]+)$')
+    if fileType then
+        fileType = fileType:upper()
+    else
+        fileType = 'UNKNOWN'
+    end
+
+    local result = {
+        width = desc.Width,
+        height = desc.Height,
+        type = fileType
+    }
 
     return gcTexture, result, nil
 end

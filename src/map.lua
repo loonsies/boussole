@@ -209,13 +209,7 @@ function map.get_current_map()
     -- Get floor ID from game function
     local floorId, err = map.get_floor_id(x, y, z)
     if not floorId then
-        -- Fallback to first entry if floor detection fails
-        local entries = map.find_entries_by_zone(zoneId)
-        if #entries > 0 then
-            return entries[1], nil
-        else
-            return nil, 'no map entries found for zone'
-        end
+        return nil, 'floor detection failed'
     end
 
     -- Find the entry matching zone + floor
