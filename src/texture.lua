@@ -1,4 +1,5 @@
 local ffi = require('ffi')
+local d3d8 = require('d3d8')
 
 local texture = {}
 
@@ -391,27 +392,51 @@ end
 
 -- Load texture from DAT data and create D3D8 texture
 function texture.load_texture_to_d3d(datData, d3d8dev)
-    -- Parse texture using FFI-based parser
-    local texture_data, err = texture.parse(datData, false)
-    if not texture_data then
-        return nil, nil, err
-    end
-
     local d3d8 = require('d3d8')
     local S_OK = 0
 
-    -- Validate parsed texture dimensions
-    if texture_data.width <= 0 or texture_data.height <= 0 then
+    -- Read header to get format and dimensions
+    local header, err = texture.parse_image_header(datData, 0x41)
+    if not header then
+        return nil, nil, err
+    end
+
+    -- Validate dimensions
+    if header.width <= 0 or header.height <= 0 then
         return nil, nil, 'Invalid texture dimensions parsed from DAT'
     end
 
-    -- Create DirectX texture
+    local d3dFormat
+    local compressedDataOffset = 0x41 + ffi.sizeof('ImageHeader') + 8 -- Header + 8 unknown bytes
+
+    if header.type == IMAGE_TYPE.DXT1 then
+        d3dFormat = ffi.C.D3DFMT_DXT1
+    elseif header.type == IMAGE_TYPE.DXT2 then
+        d3dFormat = ffi.C.D3DFMT_DXT2
+    elseif header.type == IMAGE_TYPE.DXT3 then
+        d3dFormat = ffi.C.D3DFMT_DXT3
+    elseif header.type == IMAGE_TYPE.DXT4 then
+        d3dFormat = ffi.C.D3DFMT_DXT4
+    elseif header.type == IMAGE_TYPE.DXT5 then
+        d3dFormat = ffi.C.D3DFMT_DXT5
+    elseif header.type == IMAGE_TYPE.BITMAP then
+        -- For bitmaps, we need to decompress
+        local texture_data, parseErr = texture.parse(datData, false)
+        if not texture_data then
+            return nil, nil, parseErr
+        end
+        return texture.load_uncompressed_texture(d3d8dev, texture_data)
+    else
+        return nil, nil, string.format('Unsupported image type: %s (0x%08X)', header.typeName, header.type)
+    end
+
+    -- Create DirectX texture with compressed format
     local result, dx_texture = d3d8dev:CreateTexture(
-        texture_data.width,
-        texture_data.height,
+        header.width,
+        header.height,
         1, -- mipLevels
         0, -- usage
-        ffi.C.D3DFMT_A8R8G8B8,
+        d3dFormat,
         ffi.C.D3DPOOL_MANAGED
     )
 
@@ -419,7 +444,7 @@ function texture.load_texture_to_d3d(datData, d3d8dev)
         return nil, nil, string.format('Failed to create texture: 0x%08X', result)
     end
 
-    -- Lock the texture to write pixels
+    -- Lock the texture to write compressed data
     local lockResult, lockedRect = dx_texture:LockRect(0, nil, 0)
 
     if lockResult ~= S_OK or not lockedRect then
@@ -433,16 +458,65 @@ function texture.load_texture_to_d3d(datData, d3d8dev)
         return nil, nil, 'Texture lock returned null surface pointer'
     end
 
-    -- Write RGBA pixels to texture (convert to BGRA format for D3DFMT_A8R8G8B8)
-    local dest = ffi.cast('uint8_t*', lockedRect.pBits)
-    local pitch = lockedRect.Pitch
-    local expectedRowSize = texture_data.width * 4
+    -- Calculate compressed data size
+    local compressedSize
+    if header.type == IMAGE_TYPE.DXT1 then
+        -- DXT1: 8 bytes per 4x4 block
+        compressedSize = math.max(1, header.width / 4) * math.max(1, header.height / 4) * 8
+    else -- DXT2, DXT3, DXT4, DXT5: 16 bytes per 4x4 block
+        compressedSize = math.max(1, header.width / 4) * math.max(1, header.height / 4) * 16
+    end
 
-    if pitch < expectedRowSize then
+    -- Copy compressed data directly from DAT to texture
+    local src = ffi.cast('const uint8_t*', ffi.cast('const char*', datData)) + compressedDataOffset
+    local dest = ffi.cast('uint8_t*', lockedRect.pBits)
+    ffi.copy(dest, src, compressedSize)
+
+    -- Unlock the texture
+    dx_texture:UnlockRect(0)
+
+    local gcTexture = d3d8.gc_safe_release(ffi.cast('IDirect3DBaseTexture8*', dx_texture))
+
+    local result_data = {
+        width = header.width,
+        height = header.height,
+        type = header.typeName
+    }
+
+    return gcTexture, result_data, nil
+end
+
+-- Helper function for uncompressed textures (bitmap format)
+function texture.load_uncompressed_texture(d3d8dev, texture_data)
+    local S_OK = 0
+
+    local result, dx_texture = d3d8dev:CreateTexture(
+        texture_data.width,
+        texture_data.height,
+        1,
+        0,
+        ffi.C.D3DFMT_A8R8G8B8,
+        ffi.C.D3DPOOL_MANAGED
+    )
+
+    if result ~= S_OK or not dx_texture then
+        return nil, nil, string.format('Failed to create texture: 0x%08X', result)
+    end
+
+    local lockResult, lockedRect = dx_texture:LockRect(0, nil, 0)
+    if lockResult ~= S_OK or not lockedRect then
+        dx_texture:Release()
+        return nil, nil, string.format('Failed to lock texture: 0x%08X', lockResult)
+    end
+
+    if lockedRect.pBits == nil then
         dx_texture:UnlockRect(0)
         dx_texture:Release()
-        return nil, nil, string.format('Unexpected texture pitch (%d) for width %d', pitch, texture_data.width)
+        return nil, nil, 'Texture lock returned null surface pointer'
     end
+
+    local dest = ffi.cast('uint8_t*', lockedRect.pBits)
+    local pitch = lockedRect.Pitch
 
     for y = 0, texture_data.height - 1 do
         local rowOffset = y * pitch
@@ -453,28 +527,35 @@ function texture.load_texture_to_d3d(datData, d3d8dev)
             local b = texture_data.pixels[pixelIndex + 3]
             local a = texture_data.pixels[pixelIndex + 4]
 
-            -- Validate pixel data exists
             if not r or not g or not b or not a then
                 dx_texture:UnlockRect(0)
                 dx_texture:Release()
                 return nil, nil, string.format('Incomplete pixel data at (%d, %d)', x, y)
             end
 
-            -- Write as BGRA
             local offset = rowOffset + x * 4
-            dest[offset + 0] = b -- Blue
-            dest[offset + 1] = g -- Green
-            dest[offset + 2] = r -- Red
-            dest[offset + 3] = a -- Alpha
+            dest[offset + 0] = b
+            dest[offset + 1] = g
+            dest[offset + 2] = r
+            dest[offset + 3] = a
         end
     end
 
-    -- Unlock the texture
     dx_texture:UnlockRect(0)
 
     local gcTexture = d3d8.gc_safe_release(ffi.cast('IDirect3DBaseTexture8*', dx_texture))
 
-    return gcTexture, texture_data, nil
+    local result = {
+        width = texture_data.width,
+        height = texture_data.height,
+        type = texture_data.type
+    }
+
+    -- Clear pixel data
+    texture_data.pixels = nil
+    texture_data = nil
+
+    return gcTexture, result, nil
 end
 
 return texture

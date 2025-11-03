@@ -1,6 +1,7 @@
 local ui = {}
 
 local imgui = require('imgui')
+local chat = require('chat')
 local map = require('src/map')
 local texture_module = require('src/texture')
 local info_overlay = require('src/overlays/info')
@@ -30,16 +31,24 @@ function ui.load_map_texture()
     end
 
     -- Get the DAT data
-    if not map.current_map_data or not map.current_map_data.data then
+    if not map.current_map_data then
         print(chat.header(addon.name):append(chat.warning('No map data loaded')))
         return false
     end
 
-    local datData = map.current_map_data.data
+    local datData, err = map.load_map_dat(map.current_map_data.entry)
+    if not datData then
+        print(chat.header(addon.name):append(chat.error(string.format('Failed to load map DAT: %s', err))))
+        return false
+    end
+
     local d3d8dev = d3d8.get_device()
 
     -- Load texture using texture module
     local gcTexture, texture_data, err = texture_module.load_texture_to_d3d(datData, d3d8dev)
+
+    datData = nil
+
     if not gcTexture then
         print(chat.header(addon.name):append(chat.error(string.format('Failed to load texture: %s', err))))
         return false
@@ -47,7 +56,15 @@ function ui.load_map_texture()
 
     ui.texture_id = gcTexture
     ui.texture_ptr = nil -- Will be set on first draw
-    ui.map_texture = texture_data
+    ui.map_texture = {
+        width = texture_data.width,
+        height = texture_data.height,
+        type = texture_data.type
+    }
+
+    texture_data = nil
+
+    collectgarbage('collect')
 
     return true
 end

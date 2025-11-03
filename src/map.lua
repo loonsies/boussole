@@ -7,7 +7,7 @@ local MAP_TABLE_SIG = '8A0D????????5333C05684C95774??8A5424188B7424148B7C2410B9'
 local ENTRY_SIZE = 0x0E
 
 ffi.cdef [[
-    typedef int32_t (__thiscall* GetMapFloorId_f)(void* pThis, float X, float Y, float Z);
+    typedef int32_t (__thiscall* CheckFloorNumber_f)(void* pThis, float X, float Y, float Z);
     typedef uint32_t (__thiscall* GetFilePath_f)(void* pThis, uint32_t fileId, char* buffer, uint32_t bufferSize);
 
     typedef struct FILE FILE;
@@ -45,7 +45,7 @@ function map.init_floor_function()
         return false, 'floor function signatures not found'
     end
 
-    map.floor_func = ffi.cast('GetMapFloorId_f', func_addr)
+    map.floor_func = ffi.cast('CheckFloorNumber_f', func_addr)
     map.floor_this_ptr = this_addr
 
     return true
@@ -58,7 +58,7 @@ function map.get_floor_id(x, y, z)
     end
 
     -- Read the pointer to g_pTsZoneMap
-    local this_ptr_val = mem.read_uint32(map.floor_this_ptr)
+    local this_ptr_val = mem.read_uint32(mem.read_uint32(map.floor_this_ptr))
     if this_ptr_val == 0 then
         return nil, 'g_pTsZoneMap is null'
     end
@@ -211,12 +211,20 @@ function map.get_current_map()
     if not floorId then
         -- Fallback to first entry if floor detection fails
         local entries = map.find_entries_by_zone(zoneId)
-        return entries[1], err
+        if #entries > 0 then
+            return entries[1], nil
+        else
+            return nil, 'no map entries found for zone'
+        end
     end
 
     -- Find the entry matching zone + floor
     local entry = map.find_entry_by_floor(zoneId, floorId)
-    return entry
+    if entry then
+        return entry, nil
+    else
+        return nil, 'no map entry found for floor'
+    end
 end
 
 -- Get the DAT file path for a map entry
@@ -239,7 +247,7 @@ function map.get_dat_file_path(entry)
     return filePath
 end
 
--- Load map DAT file binary data using fopen_s (for XIPivot compatibility)
+-- Load map DAT file
 function map.load_map_dat(entry)
     local filePath, err = map.get_dat_file_path(entry)
     if not filePath then
@@ -249,7 +257,7 @@ function map.load_map_dat(entry)
     local SEEK_END = 2
     local SEEK_SET = 0
 
-    -- Open file using fopen_s
+    -- Open file using fopen_s (XIPivot compatible)
     local filePtr = ffi.new('FILE*[1]')
     local result = ffi.C.fopen_s(filePtr, filePath, 'rb')
 
@@ -292,7 +300,7 @@ function map.load_map_dat(entry)
     -- Convert to Lua string
     local data = ffi.string(buffer, size)
 
-    return data, size
+    return data, nil
 end
 
 -- Load and cache the current map's DAT data
@@ -302,26 +310,19 @@ function map.load_current_map_dat()
         return nil, err
     end
 
-    local datPath, pathErr = map.get_dat_file_path(entry)
+    local datPath, err = map.get_dat_file_path(entry)
     if not datPath then
-        return nil, pathErr
-    end
-
-    local data, size = map.load_map_dat(entry)
-    if not data then
-        return nil, size -- size contains error message
+        return nil, err
     end
 
     map.current_map_data = {
         entry = entry,
-        data = data,
-        size = size,
         datIndex = map.get_dat_index(entry),
         keyItemIndex = map.get_key_item_index(entry),
         datPath = datPath
     }
 
-    return map.current_map_data
+    return map.current_map_data, nil
 end
 
 -- Clear cached map data (call on zone change)
