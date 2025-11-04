@@ -6,10 +6,21 @@ local map = require('src/map')
 
 -- Draw overlay information on the map
 function info_overlay.draw(windowPosX, windowPosY, contentMinX, contentMinY, mapData)
-    if not mapData then return end
+    local zoneId, floorId
 
-    local zoneId = mapData.entry.ZoneId
-    local floorId = mapData.entry.FloorId
+    if not mapData then
+        zoneId = map.get_player_zone()
+        if not zoneId then return end
+
+        local x, y, z = map.get_player_position()
+        if not x then return end
+
+        floorId, err = map.get_floor_id(x, y, z)
+        if not floorId then return end
+    else
+        zoneId = mapData.entry.ZoneId
+        floorId = mapData.entry.FloorId
+    end
 
     local location = nil
     local resMgr = AshitaCore:GetResourceManager()
