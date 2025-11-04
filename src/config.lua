@@ -6,6 +6,7 @@ local default = T {
     showHomepoints = { true },
     showSurvivalGuides = { true },
     showPlayer = { true },
+    useCustomMaps = { false },
     settingsPanelVisible = { false },
     mapView = {
         offsetX = 0,

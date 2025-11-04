@@ -13,6 +13,7 @@ local config = require('src/config')
 local ui = require('src/ui')
 --local packets = require('src/packets')
 local map = require('src/map')
+local texture = require('src/texture')
 local warp_points = require('src/warp_points')
 
 boussole = {
@@ -40,10 +41,11 @@ ashita.events.register('load', 'load_cb', function ()
     ashita.tasks.once(1, function ()
         local mapData, err = map.load_current_map_dat()
         if mapData then
-            ui.load_map_texture()
+            texture.load_and_set(ui, mapData, chat, addon.name)
+
             -- Store initial floor ID
             local x, y, z = map.get_player_position()
-            if x then
+            if x ~= nil and y ~= nil and z ~= nil then
                 local floor_id = map.get_floor_id(x, y, z)
                 if floor_id then
                     boussole.last_floor_id = floor_id
@@ -52,7 +54,7 @@ ashita.events.register('load', 'load_cb', function ()
         else
             print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
             map.clear_map_cache()
-            ui.load_nomap_texture()
+            texture.load_and_set(ui, nil, chat, addon.name)
         end
     end)
 end)
@@ -69,18 +71,18 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
         boussole.last_floor_check_time = current_time
 
         local x, y, z = map.get_player_position()
-        if x then
+        if x ~= nil and y ~= nil and z ~= nil then
             local current_floor_id = map.get_floor_id(x, y, z)
             if current_floor_id and boussole.last_floor_id and current_floor_id ~= boussole.last_floor_id then
                 -- Floor changed, reload map
                 boussole.last_floor_id = current_floor_id
                 local mapData, err = map.load_current_map_dat()
                 if mapData then
-                    ui.load_map_texture()
+                    texture.load_and_set(ui, mapData, chat, addon.name)
                 else
                     print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
                     map.clear_map_cache()
-                    ui.load_nomap_texture()
+                    texture.load_and_set(ui, nil, chat, addon.name)
                 end
             elseif current_floor_id then
                 boussole.last_floor_id = current_floor_id
@@ -89,16 +91,6 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
     end
 
     ui.update()
-end)
-
-ashita.events.register('mouse', 'mouse_cb', function (e)
-    -- Only block mouse events if our window is visible, focused, and mouse is over it
-    if boussole.visible[1] and ui.window_focused and ui.is_over_map_area() then
-        if e.message == 513 then
-            e.blocked = true
-            return
-        end
-    end
 end)
 
 ashita.events.register('command', 'command_cb', function (cmd, nType)
@@ -120,10 +112,11 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
         ashita.tasks.once(1, function ()
             local mapData, err = map.load_current_map_dat()
             if mapData then
-                ui.load_map_texture()
+                texture.load_and_set(ui, mapData, chat, addon.name)
+
                 -- Update floor ID after zone change
                 local x, y, z = map.get_player_position()
-                if x then
+                if x ~= nil and y ~= nil and z ~= nil then
                     local floor_id = map.get_floor_id(x, y, z)
                     if floor_id then
                         boussole.last_floor_id = floor_id
@@ -132,7 +125,7 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
             else
                 print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
                 map.clear_map_cache()
-                ui.load_nomap_texture()
+                texture.load_and_set(ui, nil, chat, addon.name)
                 boussole.last_floor_id = nil
             end
         end)

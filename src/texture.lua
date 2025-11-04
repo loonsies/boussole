@@ -1,5 +1,6 @@
 local ffi = require('ffi')
 local d3d8 = require('d3d8')
+local map = require('src/map')
 
 local texture = {}
 
@@ -588,6 +589,114 @@ function texture.load_texture_from_file(filePath, d3d8dev)
     }
 
     return gcTexture, result, nil
+end
+
+-- Check if a custom map exists for the current zone and floor
+function texture.get_custom_map_path(map_data)
+    if not map_data then
+        return nil
+    end
+
+    local entry = map_data.entry
+    local zoneId = entry.ZoneId
+    local floorId = entry.FloorId
+
+    -- Path: %InstallPath%/config/addons/boussole/custom/ZONE_FLOORID.png
+    local customPath = string.format('%sconfig\\addons\\%s\\custom\\%d_%d.png',
+        AshitaCore:GetInstallPath(),
+        addon.name,
+        zoneId,
+        floorId)
+
+    -- Check if file exists
+    local file = io.open(customPath, 'r')
+    if file then
+        file:close()
+        return customPath
+    end
+
+    return nil
+end
+
+function texture.load_map_texture(map_data)
+    local d3d8dev = d3d8.get_device()
+    local gcTexture, texture_data, err
+
+    -- Check for custom map if enabled
+    if boussole.config.useCustomMaps[1] then
+        local customPath = texture.get_custom_map_path(map_data)
+        if customPath then
+            gcTexture, texture_data, err = texture.load_texture_from_file(customPath, d3d8dev)
+            if gcTexture then
+                return gcTexture, texture_data, nil
+            else
+                -- Failed to load custom map, fall back to DAT
+                err = string.format('Failed to load custom map, falling back to DAT: %s', err)
+            end
+        end
+    end
+
+    -- Fall back to DAT map
+    local datData
+    datData, err = map.load_map_dat(map_data.entry)
+    if not datData then
+        return nil, nil, string.format('Failed to load map DAT: %s', err)
+    end
+
+    -- Load texture using texture module
+    gcTexture, texture_data, err = texture.load_texture_to_d3d(datData, d3d8dev)
+
+    datData = nil
+
+    if not gcTexture then
+        return nil, nil, string.format('Failed to load texture: %s', err)
+    end
+
+    collectgarbage('collect')
+
+    return gcTexture, texture_data, nil
+end
+
+function texture.load_nomap_texture()
+    local d3d8dev = d3d8.get_device()
+    local nomap_path = string.format('%saddons\\boussole\\assets\\nomap.png', AshitaCore:GetInstallPath())
+
+    local gcTexture, texture_data, err = texture.load_texture_from_file(nomap_path, d3d8dev)
+
+    if not gcTexture then
+        return nil, nil, string.format('Failed to load nomap.png: %s', err)
+    end
+
+    collectgarbage('collect')
+
+    return gcTexture, texture_data, nil
+end
+
+-- Load texture (map or nomap) and update UI state
+-- If map_data is nil, loads nomap texture
+function texture.load_and_set(ui_state, map_data, chat_module, addon_name)
+    local gcTexture, texture_data, err
+
+    if map_data then
+        gcTexture, texture_data, err = texture.load_map_texture(map_data)
+    else
+        gcTexture, texture_data, err = texture.load_nomap_texture()
+    end
+
+    if gcTexture then
+        ui_state.texture_id = gcTexture
+        ui_state.map_texture = {
+            width = texture_data.width,
+            height = texture_data.height,
+            type = texture_data.type
+        }
+        return true
+    else
+        if chat_module and addon_name then
+            print(chat_module.header(addon_name):append(chat_module.error(err)))
+        end
+        return false
+    end
 end
 
 return texture

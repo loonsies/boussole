@@ -3,7 +3,7 @@ local ui = {}
 local imgui = require('imgui')
 local chat = require('chat')
 local map = require('src/map')
-local texture_module = require('src/texture')
+local texture = require('src/texture')
 local info_overlay = require('src/overlays/info')
 local player_overlay = require('src/overlays/player')
 local warp_overlay = require('src/overlays/warp')
@@ -40,83 +40,6 @@ function ui.save_view_state()
         offsetY = ui.map_offset.y,
         zoom = ui.map_zoom,
     }
-end
-
-function ui.load_map_texture()
-    -- Clean up old texture
-    if ui.texture_id then
-        ui.texture_id = nil
-    end
-
-    -- Get the DAT data
-    if not map.current_map_data then
-        print(chat.header(addon.name):append(chat.warning('No map data loaded')))
-        return false
-    end
-
-    local datData, err = map.load_map_dat(map.current_map_data.entry)
-    if not datData then
-        print(chat.header(addon.name):append(chat.error(string.format('Failed to load map DAT: %s', err))))
-        return false
-    end
-
-    local d3d8dev = d3d8.get_device()
-
-    -- Load texture using texture module
-    local gcTexture, texture_data, err = texture_module.load_texture_to_d3d(datData, d3d8dev)
-
-    datData = nil
-
-    if not gcTexture then
-        print(chat.header(addon.name):append(chat.error(string.format('Failed to load texture: %s', err))))
-        return false
-    end
-
-    ui.texture_id = gcTexture
-    ui.texture_ptr = nil
-
-    ui.map_texture = {
-        width = texture_data.width,
-        height = texture_data.height,
-        type = texture_data.type
-    }
-
-    texture_data = nil
-
-    collectgarbage('collect')
-
-    return true
-end
-
-function ui.load_nomap_texture()
-    -- Clean up old texture
-    if ui.texture_id then
-        ui.texture_id = nil
-    end
-
-    local d3d8dev = d3d8.get_device()
-    local nomap_path = string.format('%saddons\\boussole\\assets\\nomap.png', AshitaCore:GetInstallPath())
-
-    local gcTexture, texture_data, err = texture_module.load_texture_from_file(nomap_path, d3d8dev)
-
-    if not gcTexture then
-        print(chat.header(addon.name):append(chat.error(string.format('Failed to load nomap.png: %s', err))))
-        return false
-    end
-
-    ui.texture_id = gcTexture
-    ui.texture_ptr = nil
-
-    ui.map_texture = {
-        width = texture_data.width,
-        height = texture_data.height,
-        type = texture_data.type
-    }
-
-    texture_data = nil
-
-    collectgarbage('collect')
-    return true
 end
 
 function ui.drawUI()
@@ -262,7 +185,7 @@ function ui.drawUI()
                     0xFFFFFFFF -- White tint
                 )
 
-                info_overlay.draw(contentMinX, contentMinY, map.current_map_data)
+                info_overlay.draw(windowPosX, windowPosY, contentMinX, contentMinY, map.current_map_data)
 
                 -- Reset tooltip state for this frame
                 tooltip.reset()
@@ -310,8 +233,8 @@ function ui.drawUI()
             end
         else
             imgui.Text('No map texture loaded')
-            if imgui.Button('Load Map Texture') then
-                ui.load_map_texture()
+            if imgui.Button('Reload Map') then
+                texture.load_and_set(ui, map.current_map_data, chat, addon.name)
             end
         end
 

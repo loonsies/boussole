@@ -14,7 +14,13 @@ local hovered_index = 0
 function warp_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
     if not mapData then return end
 
+    local resMgr = AshitaCore:GetResourceManager()
     local zoneId = mapData.entry.ZoneId
+    local zoneName = ''
+    if resMgr then
+        zoneName = resMgr:GetString('zones.names', zoneId)
+    end
+
     if not zoneId then return end
 
     local drawList = imgui.GetWindowDrawList()
@@ -158,7 +164,7 @@ function warp_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX,
 
         -- Add title with index if applicable
         if hovered_index > 0 then
-            tooltip.add_line(string.format('%s - %s #%d', hovered_point.alias, hovered_type, hovered_index), typeColor)
+            tooltip.add_line(string.format('%s - %s #%d', zoneName, hovered_type, hovered_index), typeColor)
         else
             tooltip.add_line(hovered_type, typeColor)
         end

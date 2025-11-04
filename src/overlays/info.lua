@@ -5,13 +5,12 @@ local utils = require('src/utils')
 local map = require('src/map')
 
 -- Draw overlay information on the map
-function info_overlay.draw(contentMinX, contentMinY, mapData)
+function info_overlay.draw(windowPosX, windowPosY, contentMinX, contentMinY, mapData)
     if not mapData then return end
 
     local zoneId = mapData.entry.ZoneId
     local floorId = mapData.entry.FloorId
 
-    -- Get zone name from resource manager
     local location = nil
     local resMgr = AshitaCore:GetResourceManager()
 
@@ -29,42 +28,50 @@ function info_overlay.draw(contentMinX, contentMinY, mapData)
     end
 
     if location then
-        -- Get player grid position
         local playerGrid = nil
         local gridX, gridY = map.get_player_grid_position()
         if gridX and gridY then
             playerGrid = string.format('(%s-%d)', gridX, gridY)
         end
 
-        -- Draw text with white shadow and black fill
-        local fillColor = 0xFF000000
-        local shadowColor = 0xFFFFFFFF
+        local locationSizeX, locationSizeY = imgui.CalcTextSize(location)
+        local gridSizeX, gridSizeY = 0, 0
+        if playerGrid then
+            gridSizeX, gridSizeY = imgui.CalcTextSize(playerGrid)
+        end
+
+        local maxWidth = math.max(locationSizeX, gridSizeX)
+        local totalHeight = locationSizeY + (playerGrid and (gridSizeY + 5) or 0)
+        local padding = 8
+
+        -- Draw background
+        local bgX = windowPosX + contentMinX + 10 - padding
+        local bgY = windowPosY + contentMinY + 10 - padding
+        local bgWidth = maxWidth + (padding * 2)
+        local bgHeight = totalHeight + (padding * 2)
+
+        local drawList = imgui.GetWindowDrawList()
+        drawList:AddRectFilled(
+            { bgX, bgY },
+            { bgX + bgWidth, bgY + bgHeight },
+            0x88444444,
+            3.0
+        )
+
+        -- Draw text
+        local textColor = 0xFFFFFFFF
         local yOffset = contentMinY + 10
 
-        -- Shadow
-        imgui.PushStyleColor(ImGuiCol_Text, shadowColor)
-        imgui.SetCursorPos({ contentMinX + 11, yOffset + 1 })
-        imgui.Text(location)
-        imgui.PopStyleColor()
-
-        -- Main black text
-        imgui.PushStyleColor(ImGuiCol_Text, fillColor)
+        imgui.PushStyleColor(ImGuiCol_Text, textColor)
         imgui.SetCursorPos({ contentMinX + 10, yOffset })
         imgui.Text(location)
         imgui.PopStyleColor()
 
         -- Draw player grid position below if available
         if playerGrid then
-            yOffset = yOffset + 20 -- Move down for next line
+            yOffset = yOffset + locationSizeY + 5
 
-            -- Shadow for grid position
-            imgui.PushStyleColor(ImGuiCol_Text, shadowColor)
-            imgui.SetCursorPos({ contentMinX + 11, yOffset + 1 })
-            imgui.Text(playerGrid)
-            imgui.PopStyleColor()
-
-            -- Main black text for grid position
-            imgui.PushStyleColor(ImGuiCol_Text, fillColor)
+            imgui.PushStyleColor(ImGuiCol_Text, textColor)
             imgui.SetCursorPos({ contentMinX + 10, yOffset })
             imgui.Text(playerGrid)
             imgui.PopStyleColor()

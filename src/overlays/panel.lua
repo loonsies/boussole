@@ -24,8 +24,8 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
     local drawList = imgui.GetWindowDrawList()
 
     -- Draw toggle button background
-    local buttonColor = 0xFF444444
-    local buttonHoverColor = 0xFF666666
+    local buttonColor = 0x88444444
+    local buttonHoverColor = 0xBB666666
     local buttonTextColor = 0xFFFFFFFF
 
     -- Check if mouse is over toggle button
@@ -83,7 +83,7 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
         -- Create an invisible window for the panel widgets
         imgui.SetCursorPos({ panelX - windowPosX, panelY - windowPosY })
 
-        if imgui.BeginChild('##Panel', { panelWidth, panelHeight }, false, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoBackground)) then
+        if imgui.BeginChild('##Panel', { panelWidth, panelHeight }, false, bit.bor(ImGuiWindowFlags_NoBackground, ImGuiWindowFlags_AlwaysUseWindowPadding)) then
             imgui.Text('Display Options')
             imgui.Spacing()
             imgui.Separator()
@@ -100,6 +100,16 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
             imgui.Spacing()
 
             if imgui.Checkbox('Player (me)', config.showPlayer) then
+                settings.save()
+            end
+            imgui.Spacing()
+
+            imgui.Separator()
+            imgui.Spacing()
+            imgui.Text('Map Options')
+            imgui.Spacing()
+
+            if imgui.Checkbox('Use Custom Maps', config.useCustomMaps) then
                 settings.save()
             end
             imgui.Spacing()
