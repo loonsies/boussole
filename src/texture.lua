@@ -456,8 +456,6 @@ function texture.load_and_set(ui_state, map_data, chat_module, addon_name)
             type = texture_data.type
         }
 
-        print(string.format('[BOUSSOLE] Loaded texture: %dx%d %s', texture_data.width, texture_data.height, texture_data.type))
-
         -- Restore normalized view state for the new texture size
         ui_state.restore_view_state()
         return true
