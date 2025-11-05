@@ -362,6 +362,9 @@ function map.map_to_grid_coords(entry, mapX, mapY)
     local gridX = math.floor((mapX - entry.OffsetX - 16) / 32)
     local gridY = math.floor((mapY - entry.OffsetY - 16) / 32) + 1
 
+    -- Clamp gridX to valid range (0-25 for A-Z)
+    gridX = math.max(0, math.min(25, gridX))
+
     -- Convert X to letter (0=A, 1=B, etc)
     local gridXLetter = string.char(string.byte('A') + gridX)
 
