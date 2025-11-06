@@ -132,7 +132,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
     imgui.SetCursorPos({ toggleButtonX - windowPosX, toggleButtonY - windowPosY })
     if imgui.BeginChild('##PanelToggle', { toggleButtonWidth, 60 }, false, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoBackground)) then
         if imgui.InvisibleButton('##ToggleBtn', { toggleButtonWidth, 60 }) then
-            config.settingsPanelVisible[1] = not isPanelVisible
+            boussole.config.settingsPanelVisible[1] = not isPanelVisible
             settings.save()
         end
     end
@@ -240,17 +240,17 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
             imgui.Text('Display options')
             imgui.Spacing()
 
-            if imgui.Checkbox('Homepoints', config.showHomepoints) then
+            if imgui.Checkbox('Homepoints', boussole.config.showHomepoints) then
                 settings.save()
             end
             imgui.Spacing()
 
-            if imgui.Checkbox('Survival Guides', config.showSurvivalGuides) then
+            if imgui.Checkbox('Survival Guides', boussole.config.showSurvivalGuides) then
                 settings.save()
             end
             imgui.Spacing()
 
-            if imgui.Checkbox('Player (me)', config.showPlayer) then
+            if imgui.Checkbox('Player (me)', boussole.config.showPlayer) then
                 settings.save()
             end
             imgui.Spacing()
@@ -362,7 +362,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
                 local toRemove = nil
                 local toEdit = nil
 
-                for key, redirect in pairs(config.mapRedirects) do
+                for key, redirect in pairs(boussole.config.mapRedirects) do
                     local srcZone, srcFloor = key:match('(%d+)_(%d+)')
                     srcZone = tonumber(srcZone)
                     srcFloor = tonumber(srcFloor)
@@ -433,7 +433,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
             imgui.Text('Map options')
             imgui.Spacing()
 
-            if imgui.Checkbox('Use custom maps', config.useCustomMaps) then
+            if imgui.Checkbox('Use custom maps', boussole.config.useCustomMaps) then
                 settings.save()
             end
             imgui.Spacing()
