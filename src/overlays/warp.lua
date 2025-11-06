@@ -11,7 +11,7 @@ local hovered_type = nil
 local hovered_index = 0
 
 -- Draw warp point markers on the map
-function warp_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
+function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
     if not mapData then return end
 
     local resMgr = AshitaCore:GetResourceManager()
@@ -35,7 +35,7 @@ function warp_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX,
     local hoverRadius = 10.0
 
     -- Draw homepoints for current zone (if enabled)
-    if config.showHomepoints[1] then
+    if boussole.config.showHomepoints[1] then
         local homepoints = warp_points.homepoints[zoneId]
         if homepoints then
             for idx, point in ipairs(homepoints) do
@@ -102,7 +102,7 @@ function warp_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX,
         end
     end
 
-    if config.showSurvivalGuides[1] then
+    if boussole.config.showSurvivalGuides[1] then
         local survival_guides = warp_points.survival_guides[zoneId]
         if survival_guides then
             for idx, point in ipairs(survival_guides) do

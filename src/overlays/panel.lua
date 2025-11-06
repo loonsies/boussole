@@ -9,7 +9,7 @@ local chat = require('chat')
 
 panel.width = 200
 
-function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
+function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
     local x, y, z = map.get_player_position()
     local currentZone = map.get_player_zone()
     local currentFloor = 0
@@ -91,7 +91,7 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
     local panelWidth = panel.width
     local toggleButtonWidth = 20
     local buttonSpacing = 5
-    local isPanelVisible = config.settingsPanelVisible[1]
+    local isPanelVisible = boussole.config.settingsPanelVisible[1]
 
     -- Calculate positions
     local panelX = windowPosX + contentMaxX - (isPanelVisible and panelWidth or 0)
@@ -256,7 +256,7 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
             imgui.Spacing()
 
             imgui.Separator()
-            imgui.Text('Map Redirects')
+            imgui.Text('Map redirects')
             imgui.Spacing()
 
             -- Initialize redirect state if needed
