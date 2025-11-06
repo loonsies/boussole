@@ -34,26 +34,28 @@ function tooltip.render()
         return
     end
 
-    imgui.BeginTooltip()
+    if imgui.IsWindowHovered() then
+        imgui.BeginTooltip()
 
-    for _, line in ipairs(tooltip.lines) do
-        if line.separator then
-            imgui.Separator()
-        else
-            if line.color and line.color ~= 0xFFFFFFFF then
-                -- Convert ABGR to float table {r, g, b, a}
-                local a = bit.band(bit.rshift(line.color, 24), 0xFF) / 255.0
-                local b = bit.band(bit.rshift(line.color, 16), 0xFF) / 255.0
-                local g = bit.band(bit.rshift(line.color, 8), 0xFF) / 255.0
-                local r = bit.band(line.color, 0xFF) / 255.0
-                imgui.TextColored({ r, g, b, a }, line.text)
+        for _, line in ipairs(tooltip.lines) do
+            if line.separator then
+                imgui.Separator()
             else
-                imgui.Text(line.text)
+                if line.color and line.color ~= 0xFFFFFFFF then
+                    -- Convert ABGR to float table {r, g, b, a}
+                    local a = bit.band(bit.rshift(line.color, 24), 0xFF) / 255.0
+                    local b = bit.band(bit.rshift(line.color, 16), 0xFF) / 255.0
+                    local g = bit.band(bit.rshift(line.color, 8), 0xFF) / 255.0
+                    local r = bit.band(line.color, 0xFF) / 255.0
+                    imgui.TextColored({ r, g, b, a }, line.text)
+                else
+                    imgui.Text(line.text)
+                end
             end
         end
-    end
 
-    imgui.EndTooltip()
+        imgui.EndTooltip()
+    end
 end
 
 -- Check if tooltip has content

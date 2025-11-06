@@ -237,6 +237,11 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
             imgui.Text('Display options')
             imgui.Spacing()
 
+            if imgui.Checkbox('Homepoints', config.showHomepoints) then
+                settings.save()
+            end
+            imgui.Spacing()
+
             if imgui.Checkbox('Survival Guides', config.showSurvivalGuides) then
                 settings.save()
             end

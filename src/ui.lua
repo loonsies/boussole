@@ -3,12 +3,12 @@ local ui = {}
 local imgui = require('imgui')
 local chat = require('chat')
 local map = require('src.map')
-local texture = require('src/texture')
-local info_overlay = require('src/overlays/info')
-local player_overlay = require('src/overlays/player')
-local warp_overlay = require('src/overlays/warp')
-local tooltip = require('src/overlays/tooltip')
-local panel = require('src/overlays/panel')
+local texture = require('src.texture')
+local info_overlay = require('src.overlays.info')
+local player_overlay = require('src.overlays.player')
+local warp_overlay = require('src.overlays.warp')
+local tooltip = require('src.overlays.tooltip')
+local panel = require('src.overlays.panel')
 local ffi = require('ffi')
 
 -- Cached map texture
