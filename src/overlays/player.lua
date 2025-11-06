@@ -1,8 +1,8 @@
 local player_overlay = {}
 
 local imgui = require('imgui')
-local map = require('src/map')
-local tooltip = require('src/overlays/tooltip')
+local map = require('src.map')
+local tooltip = require('src.overlays.tooltip')
 
 -- Draw player position dot on the map
 function player_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)

@@ -1,7 +1,7 @@
 utils = {}
 
-local regionZones = require('data/regionZones')
-local regions = require('data/regions')
+local regionZones = require('data.regionZones')
+local regions = require('data.regions')
 
 function utils.getRegionIDByZoneID(zoneID)
     for regionID, zoneIDs in pairs(regionZones.map) do

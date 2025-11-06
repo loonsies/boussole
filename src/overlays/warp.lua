@@ -1,9 +1,9 @@
 local warp_overlay = {}
 
 local imgui = require('imgui')
-local map = require('src/map')
-local warp_points = require('src/warp_points')
-local tooltip = require('src/overlays/tooltip')
+local map = require('src.map')
+local warp_points = require('src.warp_points')
+local tooltip = require('src.overlays.tooltip')
 
 -- Track hovered warp point for tooltip
 local hovered_point = nil

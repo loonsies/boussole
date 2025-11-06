@@ -1,8 +1,8 @@
 local info_overlay = {}
 
 local imgui = require('imgui')
-local utils = require('src/utils')
-local map = require('src/map')
+local utils = require('src.utils')
+local map = require('src.map')
 
 -- Draw overlay information on the map
 function info_overlay.draw(windowPosX, windowPosY, contentMinX, contentMinY, mapData)

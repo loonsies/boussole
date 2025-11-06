@@ -2,7 +2,7 @@ local ui = {}
 
 local imgui = require('imgui')
 local chat = require('chat')
-local map = require('src/map')
+local map = require('src.map')
 local texture = require('src/texture')
 local info_overlay = require('src/overlays/info')
 local player_overlay = require('src/overlays/player')
@@ -10,7 +10,6 @@ local warp_overlay = require('src/overlays/warp')
 local tooltip = require('src/overlays/tooltip')
 local panel = require('src/overlays/panel')
 local ffi = require('ffi')
-local d3d8 = require('d3d8')
 
 -- Cached map texture
 ui.map_texture = nil
@@ -72,7 +71,7 @@ function ui.drawUI()
 
             -- Handle mouse wheel for zoom
             local mouseWheel = imgui.GetIO().MouseWheel
-            if isMapHovered and mouseWheel ~= 0 then
+            if isMapHovered and mouseWheel ~= 0 and not boussole.dropdownOpened then
                 -- Get mouse position relative to content area
                 local mousePosX, mousePosY = imgui.GetMousePos()
                 local mouseRelX = mousePosX - (windowPosX + contentMinX)
@@ -245,6 +244,17 @@ end
 function ui.update()
     if not boussole.visible[1] then
         return
+    end
+
+    if boussole.manualMapReload[1] then
+        if boussole.manualZoneId[1] and boussole.manualFloorId[1] then
+            local entry = map.find_entry_by_floor(boussole.manualZoneId[1], boussole.manualFloorId[1])
+            if entry then
+                map.current_map_data = { entry = entry }
+                texture.load_and_set(ui, map.current_map_data, chat, addon.name)
+            end
+        end
+        boussole.manualMapReload[1] = false
     end
 
     ui.drawUI()

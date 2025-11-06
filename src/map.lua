@@ -2,6 +2,7 @@ local map = {}
 
 local mem = ashita.memory
 local ffi = require('ffi')
+local zonesFloors = require('data.zonesFloors')
 
 local MAP_TABLE_SIG = '8A0D????????5333C05684C95774??8A5424188B7424148B7C2410B9'
 local ENTRY_SIZE = 0x0E
@@ -149,35 +150,19 @@ function map.get_dat_index(entry)
     return 5522
 end
 
-function map.find_entries_by_zone(zoneid)
-    local results = {}
-    local max_scan = 3000
-    local zero_streak = 0
-    for i = 0, max_scan - 1 do
-        local e = map.read_entry(i)
-        if not e then break end
-        if e.ZoneId == zoneid then
-            table.insert(results, e)
-        end
-        if e.ZoneId == 0 then
-            zero_streak = zero_streak + 1
-            if zero_streak > 16 then break end
-        else
-            zero_streak = 0
-        end
-    end
-    return results
-end
-
--- Find a single entry by zone + floorid
+-- Find a single entry by zone + floorid using pre-generated index
 function map.find_entry_by_floor(zoneid, floorid)
-    local entries = map.find_entries_by_zone(zoneid)
-    for _, e in ipairs(entries) do
-        if e.FloorId == floorid then
-            return e
-        end
+    local zone_data = zonesFloors[zoneid]
+    if not zone_data then
+        return nil
     end
-    return nil
+
+    local entry_index = zone_data[floorid]
+    if not entry_index then
+        return nil
+    end
+
+    return map.read_entry(entry_index)
 end
 
 -- Get current player zone ID
@@ -390,6 +375,32 @@ function map.get_player_grid_position()
 
     local gridX, gridY = map.map_to_grid_coords(entry, mapX, mapY)
     return gridX, gridY, nil
+end
+
+function map.get_floors_for_zone(zoneid)
+    local zone_data = zonesFloors[zoneid]
+    if not zone_data then
+        return {}
+    end
+
+    -- Extract floor IDs from the table keys
+    local floors = {}
+    for floorid, _ in pairs(zone_data) do
+        table.insert(floors, floorid)
+    end
+    table.sort(floors)
+
+    return floors
+end
+
+function map.get_first_floor_for_zone(zoneid)
+    local floors = map.get_floors_for_zone(zoneid)
+
+    if #floors > 0 then
+        return floors[1]
+    end
+
+    return 0
 end
 
 return map

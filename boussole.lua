@@ -8,19 +8,24 @@ require 'common'
 
 local chat = require('chat')
 local settings = require('settings')
-local commands = require('src/commands')
-local config = require('src/config')
-local ui = require('src/ui')
---local packets = require('src/packets')
-local map = require('src/map')
-local texture = require('src/texture')
-local warp_points = require('src/warp_points')
+local commands = require('src.commands')
+local config = require('src.config')
+local ui = require('src.ui')
+--local packets = require('src.packets')
+local map = require('src.map')
+local texture = require('src.texture')
+local warp_points = require('src.warp_points')
 
 boussole = {
     config = {},
     visible = { false },
     last_floor_id = nil,
     last_floor_check_time = 0,
+    manualMapReload = { false },
+    zoneSearch = { '' },
+    manualZoneId = { 0 },
+    manualFloorId = { 0 },
+    dropdownOpened = false,
 }
 
 ashita.events.register('load', 'load_cb', function ()
@@ -43,13 +48,20 @@ ashita.events.register('load', 'load_cb', function ()
         if mapData then
             texture.load_and_set(ui, mapData, chat, addon.name)
 
-            -- Store initial floor ID
+            -- Store initial floor ID and set manual selections to current zone/floor
             local x, y, z = map.get_player_position()
             if x ~= nil and y ~= nil and z ~= nil then
                 local floor_id = map.get_floor_id(x, y, z)
                 if floor_id then
                     boussole.last_floor_id = floor_id
+                    boussole.manualFloorId[1] = floor_id
                 end
+            end
+
+            -- Set manual zone selection to current zone
+            local currentZone = map.get_player_zone()
+            if currentZone then
+                boussole.manualZoneId[1] = currentZone
             end
         else
             print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
@@ -120,6 +132,15 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                     local floor_id = map.get_floor_id(x, y, z)
                     if floor_id then
                         boussole.last_floor_id = floor_id
+                    end
+                end
+
+                -- Update manual zone and floor selections to current after zone change
+                local currentZone = map.get_player_zone()
+                if currentZone then
+                    boussole.manualZoneId[1] = currentZone
+                    if boussole.last_floor_id then
+                        boussole.manualFloorId[1] = boussole.last_floor_id
                     end
                 end
             else

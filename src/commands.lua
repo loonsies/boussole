@@ -15,6 +15,8 @@ function commands.handleCommand(args)
                 return commands.handleShowUi()
             elseif arg == 'hide' then
                 return commands.handleHideUi()
+            elseif arg == 'genfloors' then
+                return commands.handleGenerateFloors()
             end
         end
     end
@@ -37,6 +39,12 @@ end
 function commands.handleHideUi()
     boussole.visible[1] = false
     settings.save()
+    return true
+end
+
+function commands.handleGenerateFloors()
+    local path = AshitaCore:GetInstallPath() .. 'addons\\boussole\\data\\generate_zonesFloors.lua'
+    dofile(path)
     return true
 end
 

@@ -1,6 +1,6 @@
 local ffi = require('ffi')
 local d3d8 = require('d3d8')
-local map = require('src/map')
+local map = require('src.map')
 
 local C = ffi.C;
 local texture = {}
