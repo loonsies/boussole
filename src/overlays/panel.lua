@@ -7,10 +7,8 @@ local imgui = require('imgui')
 local settings = require('settings')
 local chat = require('chat')
 
--- Panel state
 panel.width = 200
 
--- Draw the settings panel on the right side
 function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
     local x, y, z = map.get_player_position()
     local currentZone = map.get_player_zone()
@@ -84,6 +82,10 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
             selectedZoneName = zoneNames[i]
             break
         end
+    end
+
+    if not selectedZoneName or selectedZoneName == '' then
+        selectedZoneName = 'Select Zone'
     end
 
     local panelWidth = panel.width
@@ -250,6 +252,179 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
 
             if imgui.Checkbox('Player (me)', config.showPlayer) then
                 settings.save()
+            end
+            imgui.Spacing()
+
+            imgui.Separator()
+            imgui.Text('Map Redirects')
+            imgui.Spacing()
+
+            -- Initialize redirect state if needed
+            if not boussole.redirectState then
+                boussole.redirectState = {
+                    sourceZone = { selZoneId or 0 },
+                    sourceFloor = { boussole.manualFloorId[1] or 0 },
+                    targetZone = { 0 },
+                    targetFloor = { 0 },
+                    offsetX = { 0 },
+                    offsetY = { 0 },
+                    editingKey = nil
+                }
+            end
+
+            -- Determine if we're in editing mode
+            local isEditing = boussole.redirectState.editingKey ~= nil
+            local availWidth = imgui.GetContentRegionAvail()
+            local labelWidth = 70
+            local inputWidth = availWidth - labelWidth
+
+            imgui.Text('Source:')
+            imgui.SetNextItemWidth(inputWidth)
+            if imgui.InputInt('Zone##src', boussole.redirectState.sourceZone, 1, 10, ImGuiInputTextFlags_CharsDecimal) then
+                boussole.redirectState.sourceZone[1] = math.max(0, boussole.redirectState.sourceZone[1])
+            end
+            imgui.SetNextItemWidth(inputWidth)
+            if imgui.InputInt('Floor##src', boussole.redirectState.sourceFloor, 1, 10, ImGuiInputTextFlags_CharsDecimal) then
+                boussole.redirectState.sourceFloor[1] = math.max(0, boussole.redirectState.sourceFloor[1])
+            end
+            imgui.Separator()
+            imgui.Text('Target:')
+            imgui.SetNextItemWidth(inputWidth)
+            if imgui.InputInt('Zone##tgt', boussole.redirectState.targetZone, 1, 10, ImGuiInputTextFlags_CharsDecimal) then
+                boussole.redirectState.targetZone[1] = math.max(0, boussole.redirectState.targetZone[1])
+            end
+            imgui.SetNextItemWidth(inputWidth)
+            if imgui.InputInt('Floor##tgt', boussole.redirectState.targetFloor, 1, 10, ImGuiInputTextFlags_CharsDecimal) then
+                boussole.redirectState.targetFloor[1] = math.max(0, boussole.redirectState.targetFloor[1])
+            end
+            imgui.Separator()
+            imgui.Text('Offset:')
+            imgui.SetNextItemWidth(inputWidth)
+            imgui.InputInt('X##off', boussole.redirectState.offsetX)
+            imgui.SetNextItemWidth(inputWidth)
+            imgui.InputInt('Y##off', boussole.redirectState.offsetY)
+
+            local buttonLabel = isEditing and 'Save Changes' or 'Add Redirect'
+            if imgui.Button(buttonLabel, { -1, 0 }) then
+                -- If editing, remove the old redirect first
+                if isEditing then
+                    local oldKey = boussole.redirectState.editingKey
+                    if oldKey then
+                        local oldSrcZone, oldSrcFloor = oldKey:match('(%d+)_(%d+)')
+                        if oldSrcZone and oldSrcFloor then
+                            map.remove_redirect(tonumber(oldSrcZone), tonumber(oldSrcFloor))
+                        end
+                    end
+                end
+
+                -- Add the new/updated redirect
+                map.add_redirect(
+                    boussole.redirectState.sourceZone[1],
+                    boussole.redirectState.sourceFloor[1],
+                    boussole.redirectState.targetZone[1],
+                    boussole.redirectState.targetFloor[1],
+                    boussole.redirectState.offsetX[1],
+                    boussole.redirectState.offsetY[1]
+                )
+                settings.save()
+
+                -- Reload if we added/modified a redirect for the current map
+                if boussole.redirectState.sourceZone[1] == selZoneId and
+                    boussole.redirectState.sourceFloor[1] == boussole.manualFloorId[1] then
+                    boussole.manualMapReload[1] = true
+                end
+
+                -- Clear editing state
+                boussole.redirectState.editingKey = nil
+            end
+
+            if isEditing then
+                imgui.SameLine()
+                if imgui.Button('Cancel', { -1, 0 }) then
+                    boussole.redirectState.editingKey = nil
+                    boussole.redirectState.sourceZone[1] = selZoneId or 0
+                    boussole.redirectState.sourceFloor[1] = boussole.manualFloorId[1] or 0
+                    boussole.redirectState.targetZone[1] = 0
+                    boussole.redirectState.targetFloor[1] = 0
+                    boussole.redirectState.offsetX[1] = 0
+                    boussole.redirectState.offsetY[1] = 0
+                end
+            else
+                if imgui.Button('Use Current', { -1, 0 }) then
+                    boussole.redirectState.sourceZone[1] = selZoneId
+                    boussole.redirectState.sourceFloor[1] = boussole.manualFloorId[1]
+                end
+            end
+            imgui.Spacing()
+
+            -- List of redirects at the bottom
+            if imgui.BeginChild('##RedirectList', { -1, 120 }, true) then
+                local toRemove = nil
+                local toEdit = nil
+
+                for key, redirect in pairs(config.mapRedirects) do
+                    local srcZone, srcFloor = key:match('(%d+)_(%d+)')
+                    srcZone = tonumber(srcZone)
+                    srcFloor = tonumber(srcFloor)
+
+                    if srcZone and srcFloor then
+                        local isCurrentMap = (srcZone == selZoneId and srcFloor == boussole.manualFloorId[1])
+                        local isEditingThis = (boussole.redirectState.editingKey == key)
+                        local label = string.format('%s%d|%d -> %d|%d [%d,%d]',
+                            isCurrentMap and '* ' or '',
+                            srcZone, srcFloor,
+                            redirect.targetZone, redirect.targetFloor,
+                            redirect.offsetX, redirect.offsetY)
+
+                        imgui.PushID(key)
+
+                        if imgui.Selectable(label, isEditingThis) then
+                            toEdit = { key, srcZone, srcFloor, redirect }
+                        end
+
+                        if imgui.BeginPopupContextItem() then
+                            imgui.Text(string.format('Redirect: %d|%d', srcZone, srcFloor))
+                            imgui.Separator()
+                            if imgui.MenuItem('Edit') then
+                                toEdit = { key, srcZone, srcFloor, redirect }
+                            end
+                            if imgui.MenuItem('Delete') then
+                                toRemove = { srcZone, srcFloor }
+                            end
+                            imgui.EndPopup()
+                        end
+
+                        imgui.PopID()
+                    end
+                end
+
+                -- Handle edit selection
+                if toEdit then
+                    boussole.redirectState.editingKey = toEdit[1]
+                    boussole.redirectState.sourceZone[1] = toEdit[2]
+                    boussole.redirectState.sourceFloor[1] = toEdit[3]
+                    boussole.redirectState.targetZone[1] = toEdit[4].targetZone
+                    boussole.redirectState.targetFloor[1] = toEdit[4].targetFloor
+                    boussole.redirectState.offsetX[1] = toEdit[4].offsetX
+                    boussole.redirectState.offsetY[1] = toEdit[4].offsetY
+                end
+
+                -- Handle removal
+                if toRemove then
+                    -- Clear editing state if we're deleting the edited item
+                    if boussole.redirectState.editingKey == string.format('%d_%d', toRemove[1], toRemove[2]) then
+                        boussole.redirectState.editingKey = nil
+                    end
+
+                    map.remove_redirect(toRemove[1], toRemove[2])
+                    settings.save()
+                    -- Reload if we removed the current map's redirect
+                    if toRemove[1] == selZoneId and toRemove[2] == boussole.manualFloorId[1] then
+                        boussole.manualMapReload[1] = true
+                    end
+                end
+
+                imgui.EndChild()
             end
             imgui.Spacing()
 

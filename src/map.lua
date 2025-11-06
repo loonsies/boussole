@@ -152,6 +152,24 @@ end
 
 -- Find a single entry by zone + floorid using pre-generated index
 function map.find_entry_by_floor(zoneid, floorid)
+    local originalZone = zoneid
+    local originalFloor = floorid
+    local offsetX = 0
+    local offsetY = 0
+
+    -- Check for redirect
+    if boussole.config.mapRedirects then
+        local redirectKey = string.format('%d_%d', zoneid, floorid)
+        local redirect = boussole.config.mapRedirects[redirectKey]
+
+        if redirect then
+            zoneid = redirect.targetZone or zoneid
+            floorid = redirect.targetFloor or floorid
+            offsetX = redirect.offsetX or 0
+            offsetY = redirect.offsetY or 0
+        end
+    end
+
     local zone_data = zonesFloors[zoneid]
     if not zone_data then
         return nil
@@ -162,7 +180,18 @@ function map.find_entry_by_floor(zoneid, floorid)
         return nil
     end
 
-    return map.read_entry(entry_index)
+    local entry = map.read_entry(entry_index)
+
+    -- Apply offset overrides if redirected
+    if entry and (offsetX ~= 0 or offsetY ~= 0) then
+        entry.OffsetX = entry.OffsetX + offsetX
+        entry.OffsetY = entry.OffsetY + offsetY
+        entry._redirected = true
+        entry._originalZone = originalZone
+        entry._originalFloor = originalFloor
+    end
+
+    return entry
 end
 
 -- Get current player zone ID
@@ -401,6 +430,46 @@ function map.get_first_floor_for_zone(zoneid)
     end
 
     return 0
+end
+
+function map.add_redirect(sourceZone, sourceFloor, targetZone, targetFloor, offsetX, offsetY)
+    if not boussole or not boussole.config then
+        return false, 'config not available'
+    end
+
+    local key = string.format('%d_%d', sourceZone, sourceFloor)
+    boussole.config.mapRedirects[key] = {
+        targetZone = targetZone,
+        targetFloor = targetFloor,
+        offsetX = offsetX or 0,
+        offsetY = offsetY or 0
+    }
+
+    return true
+end
+
+function map.remove_redirect(sourceZone, sourceFloor)
+    if not boussole or not boussole.config then
+        return false, 'config not available'
+    end
+
+    local key = string.format('%d_%d', sourceZone, sourceFloor)
+    boussole.config.mapRedirects[key] = nil
+
+    return true
+end
+
+function map.get_redirect(sourceZone, sourceFloor)
+    if not boussole or not boussole.config or not boussole.config.mapRedirects then
+        return nil
+    end
+
+    local key = string.format('%d_%d', sourceZone, sourceFloor)
+    return boussole.config.mapRedirects[key]
+end
+
+function map.has_redirect(sourceZone, sourceFloor)
+    return map.get_redirect(sourceZone, sourceFloor) ~= nil
 end
 
 return map

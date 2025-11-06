@@ -26,6 +26,15 @@ boussole = {
     manualZoneId = { 0 },
     manualFloorId = { 0 },
     dropdownOpened = false,
+    redirectState = {
+        sourceZone = { 0 },
+        sourceFloor = { 0 },
+        targetZone = { 0 },
+        targetFloor = { 0 },
+        offsetX = { 0 },
+        offsetY = { 0 },
+        editingKey = nil
+    }
 }
 
 ashita.events.register('load', 'load_cb', function ()

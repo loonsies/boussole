@@ -13,6 +13,7 @@ local default = T {
         offsetY = 0,
         zoom = 1.0,
     },
+    mapRedirects = {},
 }
 
 config.load = function ()
