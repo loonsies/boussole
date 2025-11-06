@@ -366,18 +366,23 @@ function texture.get_custom_map_path(map_data)
     local zoneId = entry.ZoneId
     local floorId = entry.FloorId
 
-    -- Path: %InstallPath%/config/addons/boussole/custom/ZONE_FLOORID.png
-    local customPath = string.format('%sconfig\\addons\\%s\\custom\\%d_%d.png',
-        AshitaCore:GetInstallPath(),
-        addon.name,
-        zoneId,
-        floorId)
+    -- Try multiple image formats
+    local formats = { 'png', 'bmp', 'jpg', 'jpeg', 'dds', 'tga' }
 
-    -- Check if file exists
-    local file = io.open(customPath, 'r')
-    if file then
-        file:close()
-        return customPath
+    for _, ext in ipairs(formats) do
+        local customPath = string.format('%sconfig\\addons\\%s\\custom\\%d_%d.%s',
+            AshitaCore:GetInstallPath(),
+            addon.name,
+            zoneId,
+            floorId,
+            ext)
+
+        -- Check if file exists
+        local file = io.open(customPath, 'r')
+        if file then
+            file:close()
+            return customPath
+        end
     end
 
     return nil

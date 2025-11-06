@@ -2,9 +2,10 @@ local panel = {}
 local map = require('src.map')
 local regions = require('data.regions')
 local zones = require('data.zones')
-
+local export = require('src.export')
 local imgui = require('imgui')
 local settings = require('settings')
+local chat = require('chat')
 
 -- Panel state
 panel.width = 200
@@ -259,6 +260,17 @@ function panel.draw(config, windowPosX, windowPosY, contentMinX, contentMinY, co
 
             if imgui.Checkbox('Use custom maps', config.useCustomMaps) then
                 settings.save()
+            end
+            imgui.Spacing()
+
+            local ui = require('src.ui')
+            if imgui.Button('Export map as BMP', { -1, 0 }) then
+                local success, result = export.save_map(ui.texture_id, map.current_map_data)
+                if success then
+                    print(chat.header(addon.name):append(chat.success(string.format('Map exported to: %s', result))))
+                else
+                    print(chat.header(addon.name):append(chat.error(string.format('Export failed: %s', result))))
+                end
             end
             imgui.Spacing()
         end
