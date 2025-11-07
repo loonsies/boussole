@@ -17,7 +17,7 @@ local INVALID_FILE_ATTRIBUTES = 0xFFFFFFFF
 
 -- Get the custom map folder path
 function export.get_custom_folder()
-    return string.format('%sconfig\\addons\\%s\\custom\\',
+    return string.format('%sconfig\\addons\\%s\\custom_maps\\',
         AshitaCore:GetInstallPath(),
         addon.name)
 end

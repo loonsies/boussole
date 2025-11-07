@@ -370,7 +370,7 @@ function texture.get_custom_map_path(map_data)
     local formats = { 'png', 'bmp', 'jpg', 'jpeg', 'dds', 'tga' }
 
     for _, ext in ipairs(formats) do
-        local customPath = string.format('%sconfig\\addons\\%s\\custom\\%d_%d.%s',
+        local customPath = string.format('%sconfig\\addons\\%s\\custom_maps\\%d_%d.%s',
             AshitaCore:GetInstallPath(),
             addon.name,
             zoneId,
