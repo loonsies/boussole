@@ -3,7 +3,7 @@
 ### Map replacement addon for Ashita v4 with useful overlays and simple customization
 
 <p align="center">
-  <img src="https://i.imgur.com/oP3Kilw.png" alt="Image 1" width="300px" style="max-width: 100%;"/>
+  <img src="https://i.imgur.com/oP3Kilw.png" alt="Image 1" width="600px" style="max-width: 100%;"/>
 </p>
 
 # Features
@@ -36,5 +36,6 @@
 - Uber Warp integration
 - Websocket support for LS position update
 - More ?
+
 
 
