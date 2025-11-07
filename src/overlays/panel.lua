@@ -402,7 +402,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
             local labelWidth = 70
             local inputWidth = availWidth - labelWidth
 
-            imgui.Text('Source:')
+            imgui.Text('Source')
             imgui.SetNextItemWidth(inputWidth)
             if imgui.InputInt('Zone##src', boussole.redirectState.sourceZone, 1, 10, ImGuiInputTextFlags_CharsDecimal) then
                 boussole.redirectState.sourceZone[1] = math.max(0, boussole.redirectState.sourceZone[1])
@@ -412,7 +412,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
                 boussole.redirectState.sourceFloor[1] = math.max(0, boussole.redirectState.sourceFloor[1])
             end
             imgui.Separator()
-            imgui.Text('Target:')
+            imgui.Text('Target')
             imgui.SetNextItemWidth(inputWidth)
             if imgui.InputInt('Zone##tgt', boussole.redirectState.targetZone, 1, 10, ImGuiInputTextFlags_CharsDecimal) then
                 boussole.redirectState.targetZone[1] = math.max(0, boussole.redirectState.targetZone[1])
@@ -422,7 +422,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
                 boussole.redirectState.targetFloor[1] = math.max(0, boussole.redirectState.targetFloor[1])
             end
             imgui.Separator()
-            imgui.Text('Offset:')
+            imgui.Text('Offset')
             imgui.SetNextItemWidth(inputWidth)
             imgui.InputInt('X##off', boussole.redirectState.offsetX)
             imgui.SetNextItemWidth(inputWidth)
