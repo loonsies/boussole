@@ -100,8 +100,11 @@ end
 
 function ui.drawUI()
     imgui.SetNextWindowSize({ 800, 600 }, ImGuiCond_FirstUseEver)
+    imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 })
 
     if imgui.Begin('boussole', boussole.visible, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoScrollWithMouse)) then
+        imgui.PopStyleVar()
+
         -- Track window focus state
         ui.window_focused = imgui.IsWindowFocused()
 
@@ -128,7 +131,7 @@ function ui.drawUI()
 
             -- Handle mouse wheel for zoom
             local mouseWheel = imgui.GetIO().MouseWheel
-            if isMapHovered and mouseWheel ~= 0 and not boussole.dropdownOpened then
+            if isMapHovered and mouseWheel ~= 0 and not boussole.dropdownOpened and not boussole.panelHovered then
                 -- Get mouse position relative to content area
                 local mousePosX, mousePosY = imgui.GetMousePos()
                 local mouseRelX = mousePosX - (windowPosX + contentMinX)
@@ -304,6 +307,8 @@ function ui.drawUI()
         end
 
         imgui.End()
+    else
+        imgui.PopStyleVar()
     end
 end
 

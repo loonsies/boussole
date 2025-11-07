@@ -26,6 +26,7 @@ boussole = {
     manualZoneId = { 0 },
     manualFloorId = { 0 },
     dropdownOpened = false,
+    panelHovered = false,
     redirectState = {
         sourceZone = { 0 },
         sourceFloor = { 0 },

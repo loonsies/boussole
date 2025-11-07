@@ -98,7 +98,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
     local panelY = windowPosY + contentMinY
     local panelHeight = contentMaxY - contentMinY
 
-    local toggleButtonX = isPanelVisible and (panelX - toggleButtonWidth - buttonSpacing) or (windowPosX + contentMaxX - toggleButtonWidth)
+    local toggleButtonX = isPanelVisible and (panelX - toggleButtonWidth - buttonSpacing) or (windowPosX + contentMaxX - toggleButtonWidth - buttonSpacing)
     local toggleButtonY = panelY + (panelHeight / 2) - 30
 
     local drawList = imgui.GetWindowDrawList()
@@ -108,10 +108,16 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
     local buttonHoverColor = 0xBB666666
     local buttonTextColor = 0xFFFFFFFF
 
-    -- Check if mouse is over toggle button
+    -- Check if mouse is over toggle button or panel
     local mousePosX, mousePosY = imgui.GetMousePos()
     local isHoveringButton = mousePosX >= toggleButtonX and mousePosX <= (toggleButtonX + toggleButtonWidth) and
         mousePosY >= toggleButtonY and mousePosY <= (toggleButtonY + 60)
+
+    local isHoveringPanel = isPanelVisible and
+        mousePosX >= panelX and mousePosX <= (panelX + panelWidth) and
+        mousePosY >= panelY and mousePosY <= (panelY + panelHeight)
+
+    boussole.panelHovered = isHoveringButton or isHoveringPanel
 
     -- Draw visual button background
     drawList:AddRectFilled(
