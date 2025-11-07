@@ -4,6 +4,7 @@ local imgui = require('imgui')
 local map = require('src.map')
 local tooltip = require('src.overlays.tooltip')
 local texture = require('src.texture')
+local utils = require('src.utils')
 local d3d8 = require('d3d8')
 local ffi = require('ffi')
 
@@ -68,7 +69,7 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
 
     local heading = (entity.Heading or 0) + (math.pi / 2)
 
-    local cursorSize = 20.0
+    local cursorSize = boussole.config.iconSizePlayer[1] or 20.0
     local halfSize = cursorSize / 2.0
 
     local cos_angle = math.cos(heading)
@@ -103,12 +104,14 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
     if distance <= hoverRadius then
         local playerName = entity.Name
         if playerName and playerName ~= '' then
-            tooltip.add_line(string.format('%s (me)', playerName), 0xFF0000FF)
+            local color = utils.rgb_to_abgr(boussole.config.colorPlayer)
+            tooltip.add_line(string.format('%s (me)', playerName), color)
         end
     end
 
     local drawList = imgui.GetWindowDrawList()
     local texturePointer = tonumber(ffi.cast('uint32_t', player_overlay.cursor_texture))
+    local color = utils.rgb_to_abgr(boussole.config.colorPlayer)
     if texturePointer then
         drawList:AddImageQuad(
             texturePointer,
@@ -120,7 +123,7 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
             { 1, 0 },
             { 1, 1 },
             { 0, 1 },
-            0xFF0000FF
+            color
         )
     end
 end

@@ -34,7 +34,7 @@ function tooltip.render()
         return
     end
 
-    if imgui.IsWindowHovered() then
+    if imgui.IsWindowHovered() and not boussole.panelHovered then
         imgui.BeginTooltip()
 
         for _, line in ipairs(tooltip.lines) do

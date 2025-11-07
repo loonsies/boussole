@@ -7,6 +7,8 @@ local map = require('src.map')
 local texture = require('src.texture')
 local info_overlay = require('src.overlays.info')
 local player_overlay = require('src.overlays.player')
+local party_overlay = require('src.overlays.party')
+local alliance_overlay = require('src.overlays.alliance')
 local warp_overlay = require('src.overlays.warp')
 local tooltip = require('src.overlays.tooltip')
 local panel = require('src.overlays.panel')
@@ -262,6 +264,16 @@ function ui.drawUI()
                     ui.map_zoom, ui.map_texture.width)
 
                 player_overlay.draw(map.current_map_data, windowPosX, windowPosY,
+                    contentMinX, contentMinY,
+                    ui.map_offset.x, ui.map_offset.y,
+                    ui.map_zoom, ui.map_texture.width)
+
+                party_overlay.draw(boussole.config, map.current_map_data, windowPosX, windowPosY,
+                    contentMinX, contentMinY,
+                    ui.map_offset.x, ui.map_offset.y,
+                    ui.map_zoom, ui.map_texture.width)
+
+                alliance_overlay.draw(boussole.config, map.current_map_data, windowPosX, windowPosY,
                     contentMinX, contentMinY,
                     ui.map_offset.x, ui.map_offset.y,
                     ui.map_zoom, ui.map_texture.width)

@@ -4,6 +4,7 @@ local imgui = require('imgui')
 local map = require('src.map')
 local warp_points = require('src.warp_points')
 local tooltip = require('src.overlays.tooltip')
+local utils = require('src.utils')
 
 -- Track hovered warp point for tooltip
 local hovered_point = nil
@@ -61,8 +62,8 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
                         hovered_index = idx
                     end
 
-                    local markerRadius = 8.0
-                    local markerColor = 0xFFFFAA55
+                    local markerRadius = boussole.config.iconSizeHomepoint[1] or 8.0
+                    local markerColor = utils.rgb_to_abgr(boussole.config.colorHomepoint)
                     local outlineColor = 0xFFFFFFFF
 
                     -- Draw as a diamond shape
@@ -128,8 +129,8 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
                         hovered_index = 0 -- No index for survival guides
                     end
 
-                    local markerRadius = 8.0
-                    local markerColor = 0xFF00AAFF
+                    local markerRadius = boussole.config.iconSizeSurvivalGuide[1] or 8.0
+                    local markerColor = utils.rgb_to_abgr(boussole.config.colorSurvivalGuide)
                     local outlineColor = 0xFFFFFFFF
 
                     -- Draw as a square
@@ -157,9 +158,11 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
     -- Draw tooltip if hovering over a point
     if hovered_point and hovered_type then
         -- Determine color based on type
-        local typeColor = 0xFFFFAA55
+        local typeColor
         if hovered_type == 'Survival Guide' then
-            typeColor = 0xFF00AAFF
+            typeColor = utils.rgb_to_abgr(boussole.config.colorSurvivalGuide)
+        else
+            typeColor = utils.rgb_to_abgr(boussole.config.colorHomepoint)
         end
 
         -- Add title with index if applicable

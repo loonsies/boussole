@@ -7,8 +7,6 @@ local imgui = require('imgui')
 local settings = require('settings')
 local chat = require('chat')
 
-panel.width = 200
-
 function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
     local x, y, z = map.get_player_position()
     local currentZone = map.get_player_zone()
@@ -88,13 +86,12 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
         selectedZoneName = 'Select Zone'
     end
 
-    local panelWidth = panel.width
     local toggleButtonWidth = 20
     local buttonSpacing = 5
     local isPanelVisible = boussole.config.settingsPanelVisible[1]
 
     -- Calculate positions
-    local panelX = windowPosX + contentMaxX - (isPanelVisible and panelWidth or 0)
+    local panelX = windowPosX + contentMaxX - (isPanelVisible and boussole.config.panelWidth[1] or 0)
     local panelY = windowPosY + contentMinY
     local panelHeight = contentMaxY - contentMinY
 
@@ -114,7 +111,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
         mousePosY >= toggleButtonY and mousePosY <= (toggleButtonY + 60)
 
     local isHoveringPanel = isPanelVisible and
-        mousePosX >= panelX and mousePosX <= (panelX + panelWidth) and
+        mousePosX >= panelX and mousePosX <= (panelX + boussole.config.panelWidth[1]) and
         mousePosY >= panelY and mousePosY <= (panelY + panelHeight)
 
     boussole.panelHovered = isHoveringButton or isHoveringPanel
@@ -149,7 +146,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
         -- Draw panel background
         drawList:AddRectFilled(
             { panelX, panelY },
-            { panelX + panelWidth, panelY + panelHeight },
+            { panelX + boussole.config.panelWidth[1], panelY + panelHeight },
             0xE0222222,
             0.0
         )
@@ -157,7 +154,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
         -- Draw panel border
         drawList:AddRect(
             { panelX, panelY },
-            { panelX + panelWidth, panelY + panelHeight },
+            { panelX + boussole.config.panelWidth[1], panelY + panelHeight },
             0xFF444444,
             0.0,
             0,
@@ -167,7 +164,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
         -- Create an invisible window for the panel widgets
         imgui.SetCursorPos({ panelX - windowPosX, panelY - windowPosY })
 
-        if imgui.BeginChild('##Panel', { panelWidth, panelHeight }, false, bit.bor(ImGuiWindowFlags_NoBackground, ImGuiWindowFlags_AlwaysUseWindowPadding)) then
+        if imgui.BeginChild('##Panel', { boussole.config.panelWidth[1], panelHeight }, false, bit.bor(ImGuiWindowFlags_NoBackground, ImGuiWindowFlags_AlwaysUseWindowPadding)) then
             local isBrowsingDifferentMap = (boussole.manualZoneId[1] ~= currentZone) or
                 (boussole.manualFloorId[1] ~= currentFloor)
 
@@ -278,6 +275,108 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
             if imgui.Checkbox('Player (me)', boussole.config.showPlayer) then
                 settings.save()
             end
+            if imgui.Checkbox('Party members', boussole.config.showParty) then
+                settings.save()
+            end
+            if imgui.Checkbox('Alliance members', boussole.config.showAlliance) then
+                settings.save()
+            end
+            imgui.Spacing()
+
+            imgui.Separator()
+            imgui.Text('UI Appearance')
+            imgui.Spacing()
+
+            imgui.PushItemWidth(100)
+            if imgui.InputInt('Panel Width', boussole.config.panelWidth, 10, 50) then
+                if boussole.config.panelWidth[1] < 100 then
+                    boussole.config.panelWidth[1] = 100
+                elseif boussole.config.panelWidth[1] > 400 then
+                    boussole.config.panelWidth[1] = 400
+                end
+                settings.save()
+            end
+            imgui.PopItemWidth()
+            imgui.Spacing()
+
+            imgui.Text('Icon Sizes')
+            imgui.PushItemWidth(100)
+            if imgui.InputInt('Homepoint##IconSize', boussole.config.iconSizeHomepoint, 1, 5) then
+                if boussole.config.iconSizeHomepoint[1] < 2 then
+                    boussole.config.iconSizeHomepoint[1] = 2
+                elseif boussole.config.iconSizeHomepoint[1] > 20 then
+                    boussole.config.iconSizeHomepoint[1] = 20
+                end
+                settings.save()
+            end
+            if imgui.InputInt('Survival Guide##IconSize', boussole.config.iconSizeSurvivalGuide, 1, 5) then
+                if boussole.config.iconSizeSurvivalGuide[1] < 2 then
+                    boussole.config.iconSizeSurvivalGuide[1] = 2
+                elseif boussole.config.iconSizeSurvivalGuide[1] > 20 then
+                    boussole.config.iconSizeSurvivalGuide[1] = 20
+                end
+                settings.save()
+            end
+            if imgui.InputInt('Player##IconSize', boussole.config.iconSizePlayer, 1, 5) then
+                if boussole.config.iconSizePlayer[1] < 4 then
+                    boussole.config.iconSizePlayer[1] = 4
+                elseif boussole.config.iconSizePlayer[1] > 40 then
+                    boussole.config.iconSizePlayer[1] = 40
+                end
+                settings.save()
+            end
+            if imgui.InputInt('Party##IconSize', boussole.config.iconSizeParty, 1, 5) then
+                if boussole.config.iconSizeParty[1] < 4 then
+                    boussole.config.iconSizeParty[1] = 4
+                elseif boussole.config.iconSizeParty[1] > 40 then
+                    boussole.config.iconSizeParty[1] = 40
+                end
+                settings.save()
+            end
+            if imgui.InputInt('Alliance##IconSize', boussole.config.iconSizeAlliance, 1, 5) then
+                if boussole.config.iconSizeAlliance[1] < 4 then
+                    boussole.config.iconSizeAlliance[1] = 4
+                elseif boussole.config.iconSizeAlliance[1] > 40 then
+                    boussole.config.iconSizeAlliance[1] = 40
+                end
+                settings.save()
+            end
+            imgui.PopItemWidth()
+            imgui.Spacing()
+
+            -- Colors
+            imgui.Text('Colors')
+            if imgui.ColorEdit4('Homepoint##Color', boussole.config.colorHomepoint, ImGuiColorEditFlags_NoInputs) then
+                settings.save()
+            end
+            if imgui.ColorEdit4('Survival Guide##Color', boussole.config.colorSurvivalGuide, ImGuiColorEditFlags_NoInputs) then
+                settings.save()
+            end
+            if imgui.ColorEdit4('Player (me)##Color', boussole.config.colorPlayer, ImGuiColorEditFlags_NoInputs) then
+                settings.save()
+            end
+            if imgui.ColorEdit4('Party##Color', boussole.config.colorParty, ImGuiColorEditFlags_NoInputs) then
+                settings.save()
+            end
+            if imgui.ColorEdit4('Alliance##Color', boussole.config.colorAlliance, ImGuiColorEditFlags_NoInputs) then
+                settings.save()
+            end
+            if imgui.ColorEdit4('Info Panel Bg##Color', boussole.config.colorInfoPanelBg, ImGuiColorEditFlags_NoInputs) then
+                settings.save()
+            end
+            imgui.Spacing()
+
+            imgui.Text('Info Panel')
+            imgui.PushItemWidth(100)
+            if imgui.InputInt('Font Size##InfoPanel', boussole.config.infoPanelFontSize, 1, 2) then
+                if boussole.config.infoPanelFontSize[1] < 8 then
+                    boussole.config.infoPanelFontSize[1] = 8
+                elseif boussole.config.infoPanelFontSize[1] > 24 then
+                    boussole.config.infoPanelFontSize[1] = 24
+                end
+                settings.save()
+            end
+            imgui.PopItemWidth()
             imgui.Spacing()
 
             imgui.Separator()
