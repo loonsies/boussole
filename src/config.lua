@@ -25,6 +25,8 @@ local default = T {
     colorParty = { 0.349, 0.639, 1.0, 1.0 },
     colorAlliance = { 0.212, 0.894, 0.424, 1.0 },
     colorInfoPanelBg = { 0.267, 0.267, 0.267, 0.533 },
+    colorPanelBg = { 0.12, 0.12, 0.12, 0.85 },
+    colorToggleBtn = { 0.53, 0.53, 0.53, 0.55 },
     customPoints = {},
 }
 

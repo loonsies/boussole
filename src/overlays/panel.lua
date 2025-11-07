@@ -6,6 +6,7 @@ local export = require('src.export')
 local imgui = require('imgui')
 local settings = require('settings')
 local chat = require('chat')
+local utils = require('src.utils')
 
 function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
     local x, y, z = map.get_player_position()
@@ -100,9 +101,10 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
 
     local drawList = imgui.GetWindowDrawList()
 
-    -- Draw toggle button background
-    local buttonColor = 0x88444444
-    local buttonHoverColor = 0xBB666666
+    local baseColor = boussole.config.colorToggleBtn
+    local color = utils.rgb_to_abgr(baseColor)
+    local hover = { baseColor[1], baseColor[2], baseColor[3], math.min(1.0, (baseColor[4] or 1.0) + 0.2) }
+    local hoverColor = utils.rgb_to_abgr(hover)
     local buttonTextColor = 0xFFFFFFFF
 
     -- Check if mouse is over toggle button or panel
@@ -120,7 +122,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
     drawList:AddRectFilled(
         { toggleButtonX, toggleButtonY },
         { toggleButtonX + toggleButtonWidth, toggleButtonY + 60 },
-        isHoveringButton and buttonHoverColor or buttonColor,
+        isHoveringButton and hoverColor or color,
         3.0
     )
 
@@ -144,10 +146,11 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
     -- Draw panel if visible
     if isPanelVisible then
         -- Draw panel background
+        local color = utils.rgb_to_abgr(boussole.config.colorPanelBg)
         drawList:AddRectFilled(
             { panelX, panelY },
             { panelX + boussole.config.panelWidth[1], panelY + panelHeight },
-            0xE0222222,
+            color,
             0.0
         )
 
@@ -346,24 +349,14 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
 
             -- Colors
             imgui.Text('Colors')
-            if imgui.ColorEdit4('Homepoint##Color', boussole.config.colorHomepoint, ImGuiColorEditFlags_NoInputs) then
-                settings.save()
-            end
-            if imgui.ColorEdit4('Survival Guide##Color', boussole.config.colorSurvivalGuide, ImGuiColorEditFlags_NoInputs) then
-                settings.save()
-            end
-            if imgui.ColorEdit4('Player (me)##Color', boussole.config.colorPlayer, ImGuiColorEditFlags_NoInputs) then
-                settings.save()
-            end
-            if imgui.ColorEdit4('Party##Color', boussole.config.colorParty, ImGuiColorEditFlags_NoInputs) then
-                settings.save()
-            end
-            if imgui.ColorEdit4('Alliance##Color', boussole.config.colorAlliance, ImGuiColorEditFlags_NoInputs) then
-                settings.save()
-            end
-            if imgui.ColorEdit4('Info Panel Bg##Color', boussole.config.colorInfoPanelBg, ImGuiColorEditFlags_NoInputs) then
-                settings.save()
-            end
+            if imgui.ColorEdit4('Homepoint##Color', boussole.config.colorHomepoint, ImGuiColorEditFlags_NoInputs) then settings.save() end
+            if imgui.ColorEdit4('Survival Guide##Color', boussole.config.colorSurvivalGuide, ImGuiColorEditFlags_NoInputs) then settings.save() end
+            if imgui.ColorEdit4('Player (me)##Color', boussole.config.colorPlayer, ImGuiColorEditFlags_NoInputs) then settings.save() end
+            if imgui.ColorEdit4('Party##Color', boussole.config.colorParty, ImGuiColorEditFlags_NoInputs) then settings.save() end
+            if imgui.ColorEdit4('Alliance##Color', boussole.config.colorAlliance, ImGuiColorEditFlags_NoInputs) then settings.save() end
+            if imgui.ColorEdit4('Info Panel Bg##Color', boussole.config.colorInfoPanelBg, ImGuiColorEditFlags_NoInputs) then settings.save() end
+            if imgui.ColorEdit4('Panel Bg##Color', boussole.config.colorPanelBg, ImGuiColorEditFlags_NoInputs) then settings.save() end
+            if imgui.ColorEdit4('Toggle Btn##Color', boussole.config.colorToggleBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
             imgui.Spacing()
 
             imgui.Text('Info Panel')
