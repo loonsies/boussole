@@ -12,6 +12,8 @@
 - Homepoints and survival guide markers
 - Persistent, custom map points
 - Custom PNG icons per point (optional tint)
+- Custom maps
+- XiPivot support
 
 # Quick use
 - You can open the right panel to filter what overlays are displayed, browse maps, redirect maps, customize UI, export maps to .BMP, and more
@@ -36,6 +38,7 @@
 - Uber Warp integration
 - Websocket support for LS position update
 - More ?
+
 
 
 
