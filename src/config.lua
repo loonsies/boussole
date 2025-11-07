@@ -8,11 +8,7 @@ local default = T {
     showPlayer = { true },
     useCustomMaps = { false },
     settingsPanelVisible = { false },
-    mapView = {
-        offsetX = 0,
-        offsetY = 0,
-        zoom = 1.0,
-    },
+    mapViews = {},
     mapRedirects = {},
 }
 

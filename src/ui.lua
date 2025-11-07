@@ -2,6 +2,7 @@ local ui = {}
 
 local imgui = require('imgui')
 local chat = require('chat')
+local settings = require('settings')
 local map = require('src.map')
 local texture = require('src.texture')
 local info_overlay = require('src.overlays.info')
@@ -16,29 +17,85 @@ ui.map_texture = nil
 ui.texture_id = nil
 
 -- Map view state
-ui.map_offset = { x = 0, y = 0 } -- Pan offset
-ui.map_zoom = 1.0                -- Zoom level
+ui.map_offset = { x = 0, y = 0 }
+ui.map_zoom = 0.0
 ui.is_dragging = false
 ui.drag_start = { x = 0, y = 0 }
-ui.window_bounds = nil    -- Window content area bounds for mouse blocking
-ui.window_focused = false -- Whether our window has focus
+ui.window_bounds = nil
+ui.window_focused = false
+ui.current_view_key = nil
+ui.last_saved_offset = { x = 0, y = 0 }
+ui.last_saved_zoom = 0.0
+ui.save_timer = 0
 
--- Restore map view state from config
+-- Get the key for current zone+floor
+function ui.get_view_key()
+    if not map.current_map_data or not map.current_map_data.entry then
+        return nil
+    end
+    local zoneId = map.current_map_data.entry.ZoneId
+    local floorId = map.current_map_data.entry.FloorId
+    return string.format('%d_%d', zoneId, floorId)
+end
+
+-- Restore map view state from config for current zone+floor
 function ui.restore_view_state()
-    if boussole.config.mapView then
-        ui.map_offset.x = boussole.config.mapView.offsetX or 0
-        ui.map_offset.y = boussole.config.mapView.offsetY or 0
-        ui.map_zoom = boussole.config.mapView.zoom or 1.0
+    local viewKey = ui.get_view_key()
+    if viewKey and boussole.config.mapViews and boussole.config.mapViews[viewKey] then
+        local savedView = boussole.config.mapViews[viewKey]
+        ui.map_offset.x = savedView.offsetX or 0
+        ui.map_offset.y = savedView.offsetY or 0
+        ui.map_zoom = savedView.zoom or -1
+        ui.current_view_key = viewKey
+    else
+        -- Reset to defaults if no saved view
+        ui.map_offset.x = 0
+        ui.map_offset.y = 0
+        ui.map_zoom = -1
+        ui.current_view_key = viewKey
+    end
+
+    -- Update last saved values to match restored values
+    ui.last_saved_offset.x = ui.map_offset.x
+    ui.last_saved_offset.y = ui.map_offset.y
+    ui.last_saved_zoom = ui.map_zoom
+end
+
+-- Save current map view state to config for current zone+floor
+function ui.save_view_state()
+    local viewKey = ui.get_view_key()
+    if viewKey then
+        if not boussole.config.mapViews then
+            boussole.config.mapViews = {}
+        end
+        boussole.config.mapViews[viewKey] = {
+            offsetX = ui.map_offset.x,
+            offsetY = ui.map_offset.y,
+            zoom = ui.map_zoom,
+        }
+        ui.current_view_key = viewKey
+
+        -- Update last saved values
+        ui.last_saved_offset.x = ui.map_offset.x
+        ui.last_saved_offset.y = ui.map_offset.y
+        ui.last_saved_zoom = ui.map_zoom
     end
 end
 
--- Save current map view state to config
-function ui.save_view_state()
-    boussole.config.mapView = {
-        offsetX = ui.map_offset.x,
-        offsetY = ui.map_offset.y,
-        zoom = ui.map_zoom,
-    }
+function ui.save_view_state_debounce()
+    local changed = math.abs(ui.map_offset.x - ui.last_saved_offset.x) > 0.1 or
+        math.abs(ui.map_offset.y - ui.last_saved_offset.y) > 0.1 or
+        math.abs(ui.map_zoom - ui.last_saved_zoom) > 0.01
+
+    if changed then
+        local current_time = os.clock()
+
+        if current_time - ui.save_timer > 1 then
+            ui.save_view_state()
+            settings.save()
+            ui.save_timer = current_time
+        end
+    end
 end
 
 function ui.drawUI()
@@ -146,7 +203,14 @@ function ui.drawUI()
             local minZoomX = availWidth / ui.map_texture.width
             local minZoomY = availHeight / ui.map_texture.height
             local minZoom = math.min(minZoomX, minZoomY)
-            ui.map_zoom = math.max(ui.map_zoom, minZoom) -- Enforce minimum zoom
+
+            -- If zoom is -1 (not initialized), set it to minimum zoom for full map view
+            if ui.map_zoom < 0 then
+                ui.map_zoom = minZoom
+                ui.last_saved_zoom = minZoom
+            else
+                ui.map_zoom = math.max(ui.map_zoom, minZoom)
+            end
 
             -- Recalculate texture size with enforced zoom
             texWidth = ui.map_texture.width * ui.map_zoom
@@ -229,6 +293,8 @@ function ui.drawUI()
                 panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
 
                 tooltip.render()
+
+                ui.save_view_state_debounce()
             end
         else
             imgui.Text('No map texture loaded')

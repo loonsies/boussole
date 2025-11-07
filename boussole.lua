@@ -45,11 +45,8 @@ ashita.events.register('load', 'load_cb', function ()
     -- Initialize warp point data
     warp_points.init()
 
-    ui.restore_view_state()
-
     settings.register('settings', 'settings_update_cb', function (newConfig)
         boussole.config = newConfig
-        ui.restore_view_state()
     end)
 
     ashita.tasks.once(1, function ()

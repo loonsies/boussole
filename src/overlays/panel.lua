@@ -162,7 +162,26 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
         imgui.SetCursorPos({ panelX - windowPosX, panelY - windowPosY })
 
         if imgui.BeginChild('##Panel', { panelWidth, panelHeight }, false, bit.bor(ImGuiWindowFlags_NoBackground, ImGuiWindowFlags_AlwaysUseWindowPadding)) then
-            imgui.Text('Browse maps')
+            local isBrowsingDifferentMap = (boussole.manualZoneId[1] ~= currentZone) or
+                (boussole.manualFloorId[1] ~= currentFloor)
+
+            if isBrowsingDifferentMap then
+                imgui.Text('Browse maps')
+                imgui.SameLine()
+                imgui.SetCursorPosX(imgui.GetCursorPosX() + 5)
+
+                local _, textH = imgui.CalcTextSize('Browse maps')
+                imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 })
+                if imgui.Button('Current', { -1, textH }) then
+                    -- Return to current map
+                    boussole.manualZoneId[1] = currentZone
+                    boussole.manualFloorId[1] = currentFloor
+                    boussole.manualMapReload[1] = true
+                end
+                imgui.PopStyleVar()
+            else
+                imgui.Text('Browse maps')
+            end
             imgui.Spacing()
 
             imgui.SetNextItemWidth(-1)
