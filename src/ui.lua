@@ -10,6 +10,7 @@ local player_overlay = require('src.overlays.player')
 local party_overlay = require('src.overlays.party')
 local alliance_overlay = require('src.overlays.alliance')
 local warp_overlay = require('src.overlays.warp')
+local custom_points = require('src.overlays.custom_points')
 local tooltip = require('src.overlays.tooltip')
 local panel = require('src.overlays.panel')
 local ffi = require('ffi')
@@ -23,6 +24,7 @@ ui.map_offset = { x = 0, y = 0 }
 ui.map_zoom = 0.0
 ui.is_dragging = false
 ui.drag_start = { x = 0, y = 0 }
+ui.drag_moved = false
 ui.window_bounds = nil
 ui.window_focused = false
 ui.current_view_key = nil
@@ -133,7 +135,7 @@ function ui.drawUI()
 
             -- Handle mouse wheel for zoom
             local mouseWheel = imgui.GetIO().MouseWheel
-            if isMapHovered and mouseWheel ~= 0 and not boussole.dropdownOpened and not boussole.panelHovered then
+            if isMapHovered and mouseWheel ~= 0 and not boussole.dropdownOpened and not boussole.panelHovered and not custom_points.popup_state.open then
                 -- Get mouse position relative to content area
                 local mousePosX, mousePosY = imgui.GetMousePos()
                 local mouseRelX = mousePosX - (windowPosX + contentMinX)
@@ -167,6 +169,7 @@ function ui.drawUI()
                 if not ui.is_dragging and isMapHovered then
                     -- Start dragging only when over the map
                     ui.is_dragging = true
+                    ui.drag_moved = false
                     local mousePosX, mousePosY = imgui.GetMousePos()
                     ui.drag_start.x = mousePosX
                     ui.drag_start.y = mousePosY
@@ -175,6 +178,11 @@ function ui.drawUI()
                     local mousePosX, mousePosY = imgui.GetMousePos()
                     local deltaX = mousePosX - ui.drag_start.x
                     local deltaY = mousePosY - ui.drag_start.y
+
+                    -- Check if mouse actually moved
+                    if math.abs(deltaX) > 2 or math.abs(deltaY) > 2 then
+                        ui.drag_moved = true
+                    end
 
                     -- Calculate new offset with delta
                     local newOffsetX = ui.map_offset.x + deltaX
@@ -201,7 +209,57 @@ function ui.drawUI()
                     ui.drag_start.y = mousePosY
                 end
             else
+                -- Right mouse button released
+                if ui.is_dragging and not ui.drag_moved and isMapHovered and not boussole.panelHovered then
+                    -- Open custom point popup if it wasn't a drag action
+                    local mousePosX, mousePosY = imgui.GetMousePos()
+
+                    -- Check if clicking on an existing point
+                    local clickedPoint = custom_points.find_point_at_position(
+                        map.current_map_data.entry.ZoneId,
+                        map.current_map_data.entry.FloorId,
+                        mousePosX, mousePosY,
+                        map.current_map_data,
+                        windowPosX, windowPosY,
+                        contentMinX, contentMinY,
+                        ui.map_offset.x, ui.map_offset.y,
+                        ui.map_zoom,
+                        ui.map_texture.width
+                    )
+
+                    if clickedPoint then
+                        -- Edit existing point
+                        custom_points.open_edit_popup(
+                            map.current_map_data.entry.ZoneId,
+                            map.current_map_data.entry.FloorId,
+                            clickedPoint.id,
+                            clickedPoint.point
+                        )
+                    else
+                        -- Add new point - convert mouse to map coordinates
+                        local texPosX = windowPosX + contentMinX + ui.map_offset.x
+                        local texPosY = windowPosY + contentMinY + ui.map_offset.y
+                        local texMouseX = (mousePosX - texPosX) / ui.map_zoom
+                        local texMouseY = (mousePosY - texPosY) / ui.map_zoom
+
+                        -- Check if click is within texture bounds
+                        if texMouseX >= 0 and texMouseX <= ui.map_texture.width and
+                            texMouseY >= 0 and texMouseY <= ui.map_texture.height then
+                            -- Scale texture coordinates to 512x512 map coordinate space
+                            local scale = 512.0 / ui.map_texture.width
+                            local mapX = texMouseX * scale + map.current_map_data.entry.OffsetX
+                            local mapY = texMouseY * scale + map.current_map_data.entry.OffsetY
+
+                            custom_points.open_add_popup(
+                                map.current_map_data.entry.ZoneId,
+                                map.current_map_data.entry.FloorId,
+                                mapX, mapY
+                            )
+                        end
+                    end
+                end
                 ui.is_dragging = false
+                ui.drag_moved = false
             end
 
             -- Always ensure zoom fits map in window (handles window resize)
@@ -278,6 +336,11 @@ function ui.drawUI()
                     ui.map_offset.x, ui.map_offset.y,
                     ui.map_zoom, ui.map_texture.width)
 
+                custom_points.draw(map.current_map_data, windowPosX, windowPosY,
+                    contentMinX, contentMinY,
+                    ui.map_offset.x, ui.map_offset.y,
+                    ui.map_zoom, ui.map_texture.width)
+
                 -- Add grid position to tooltip if hovering over map
                 if isMapHovered and map.current_map_data then
                     local mousePosX, mousePosY = imgui.GetMousePos()
@@ -308,6 +371,8 @@ function ui.drawUI()
                 panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
 
                 tooltip.render()
+
+                custom_points.draw_popup()
 
                 ui.save_view_state_debounce()
             end
