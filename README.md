@@ -45,9 +45,11 @@
 - Uber Warp integration
 - Websocket support for LS position update
 - Hide maps if not in possession of the map key item
+- Widescan support
 - More ?
 
 # Credits and thanks
 atom0s & Thorny for providing code and help
+
 
 
