@@ -2,12 +2,18 @@
 
 ### Map replacement addon for Ashita v4 with useful overlays and simple customization
 
+<p align="center">
+  <img src="https://i.imgur.com/oP3Kilw.png" alt="Image 1" width="600px" style="max-width: 100%;"/>
+</p>
+
 # Features
 - Zone/floor-aware map with pan & zoom
 - Player / party / alliance cursors updated in real-time
 - Homepoints and survival guide markers
 - Persistent, custom map points
 - Custom PNG icons per point (optional tint)
+- Custom maps
+- XiPivot support
 
 # Quick use
 - You can open the right panel to filter what overlays are displayed, browse maps, redirect maps, customize UI, export maps to .BMP, and more
@@ -25,11 +31,14 @@
 - `/boussole` Toggles the UI
 - `/boussole show` Shows the UI
 - `/boussole` Hides the UI
-- `/boussole genfloors` Regenerate zonesFloors.lua
+- `/boussole genfloors` Regenerates zonesFloors.lua
 
 # Planned features
 - Fullscreen map
 - Uber Warp integration
 - Websocket support for LS position update
 - More ?
+
+
+
 
