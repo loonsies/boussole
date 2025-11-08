@@ -43,6 +43,10 @@
 - Websocket support for LS position update
 - More ?
 
+# Credits and thanks
+atom0s & Thorny for providing code and help
+
+
 
 
 
