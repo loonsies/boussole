@@ -4,8 +4,11 @@
   <img src="https://github.com/loonsies/boussole/blob/main/assets/logo.png?raw=true" alt="Image 1" width="700" style="max-width: 100%;"/>
 </p>
 
+<h3 align="center" style="margin-bottom: 50px;">
+  Map replacement addon for Ashita v4 with useful overlays and simple customization
+</h3>
+
 <p align="center">
-  ### Map replacement addon for Ashita v4 with useful overlays and simple customization
   <img src="https://i.imgur.com/oP3Kilw.png" alt="Image 1" width="600px" style="max-width: 100%;"/>
 </p>
 
@@ -44,10 +47,3 @@
 
 # Credits and thanks
 atom0s & Thorny for providing code and help
-
-
-
-
-
-
-
