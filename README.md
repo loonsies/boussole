@@ -1,7 +1,7 @@
 # boussole — FFXI Map Addon for Ashita
 
 <p align="center">
-  <img src="https://github.com/loonsies/boussole/blob/main/assets/logo.png?raw=true" alt="Image 1" width="700" style="max-width: 100%;"/>
+  <img src="https://raw.githubusercontent.com/loonsies/boussole/refs/heads/main/assets/logo.png" alt="Image 1" width="700" style="max-width: 100%;"/>
 </p>
 
 <h3 align="center" style="margin-bottom: 50px;">
@@ -47,3 +47,4 @@
 
 # Credits and thanks
 atom0s & Thorny for providing code and help
+
