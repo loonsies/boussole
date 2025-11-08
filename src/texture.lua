@@ -454,6 +454,20 @@ function texture.load_and_set(ui_state, map_data, chat_module, addon_name)
     end
 
     if gcTexture then
+        if map_data then
+            map.current_map_data = map_data
+        else
+            map.current_map_data = {
+                entry = {
+                    ZoneId = 0,
+                    FloorId = 0,
+                    OffsetX = 0,
+                    OffsetY = 0,
+                    Scale = 1,
+                }
+            }
+        end
+
         ui_state.texture_id = gcTexture
         ui_state.map_texture = {
             width = texture_data.width,

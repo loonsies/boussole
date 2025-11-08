@@ -210,7 +210,7 @@ function ui.drawUI()
                 end
             else
                 -- Right mouse button released
-                if ui.is_dragging and not ui.drag_moved and isMapHovered and not boussole.panelHovered then
+                if ui.is_dragging and not ui.drag_moved and isMapHovered and not boussole.panelHovered and map.current_map_data and map.current_map_data.entry then
                     -- Open custom point popup if it wasn't a drag action
                     local mousePosX, mousePosY = imgui.GetMousePos()
 
@@ -296,7 +296,7 @@ function ui.drawUI()
 
             -- Draw the map texture
             local texturePointer = tonumber(ffi.cast('uint32_t', ui.texture_id))
-            if texturePointer then
+            if texturePointer and map.current_map_data and map.current_map_data.entry then
                 -- Calculate position
                 local posX = windowPosX + contentMinX + ui.map_offset.x
                 local posY = windowPosY + contentMinY + ui.map_offset.y
@@ -342,7 +342,7 @@ function ui.drawUI()
                     ui.map_zoom, ui.map_texture.width)
 
                 -- Add grid position to tooltip if hovering over map
-                if isMapHovered and map.current_map_data then
+                if isMapHovered and map.current_map_data and map.current_map_data.entry then
                     local mousePosX, mousePosY = imgui.GetMousePos()
 
                     -- Convert mouse position to texture coordinates
