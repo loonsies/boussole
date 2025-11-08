@@ -1,5 +1,9 @@
 # boussole — FFXI Map Addon for Ashita
 
+<p align="center">
+  <img src="https://github.com/loonsies/boussole/blob/main/assets/logo.png?raw=true" alt="Image 1" width="700" style="max-width: 100%;"/>
+</p>
+
 ### Map replacement addon for Ashita v4 with useful overlays and simple customization
 
 <p align="center">
@@ -38,6 +42,7 @@
 - Uber Warp integration
 - Websocket support for LS position update
 - More ?
+
 
 
 
