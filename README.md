@@ -1,10 +1,12 @@
 # boussole — FFXI Map Addon for Ashita
 
 <p align="center">
-  <img src="https://github.com/loonsies/boussole/blob/main/assets/logo.png?raw=true" alt="Image 1" width="700" style="max-width: 100%;"/>
+  <img src="https://raw.githubusercontent.com/loonsies/boussole/refs/heads/main/assets/logo.png" alt="Image 1" width="700" style="max-width: 100%;"/>
 </p>
 
-### Map replacement addon for Ashita v4 with useful overlays and simple customization
+<h3 align="center" style="margin-bottom: 50px;">
+  Map replacement addon for Ashita v4 with useful overlays and simple customization
+</h3>
 
 <p align="center">
   <img src="https://i.imgur.com/oP3Kilw.png" alt="Image 1" width="600px" style="max-width: 100%;"/>
@@ -34,15 +36,20 @@
 # Commands
 - `/boussole` Toggles the UI
 - `/boussole show` Shows the UI
-- `/boussole` Hides the UI
+- `/boussole hide` Hides the UI
 - `/boussole genfloors` Regenerates zonesFloors.lua
 
 # Planned features
 - Fullscreen map
+- Minimap
 - Uber Warp integration
 - Websocket support for LS position update
+- Hide maps if not in possession of the map key item
+- Widescan support
 - More ?
 
+# Credits and thanks
+atom0s & Thorny for providing code and help
 
 
 
