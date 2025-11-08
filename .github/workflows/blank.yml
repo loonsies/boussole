@@ -1,0 +1,59 @@
+name: Version bump + release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 2.10)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  manual-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        tags: true
+
+    - name: Update version in boussole.lua
+      run: |
+        sed -i "s/\(addon.version = \).*/\1\"${{ github.event.inputs.version }}\"/" boussole.lua
+
+    - name: Commit and push version update
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git commit -am "Bump version to ${{ github.event.inputs.version }}"
+        git push origin HEAD:main
+
+    - name: Create tag
+      run: |
+        git tag -a "${{ github.event.inputs.version }}" -m "Release ${{ github.event.inputs.version }}"
+        git push origin "${{ github.event.inputs.version }}"
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -n "$PREV_TAG" ]; then
+          RANGE="$PREV_TAG..HEAD"
+          CHANGELOG=$(git log --pretty=format:'- [`%h`](https://github.com/${{ github.repository }}/commit/%H) %s' $RANGE)
+        else
+          CHANGELOG=""
+        fi
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.event.inputs.version }}
+        name: ${{ github.event.inputs.version }}
+        body: ${{ steps.changelog.outputs.changelog }}
