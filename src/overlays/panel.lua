@@ -135,7 +135,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
     drawList:AddText({ textX, textY }, buttonTextColor, buttonText)
 
     imgui.SetCursorPos({ toggleButtonX - windowPosX, toggleButtonY - windowPosY })
-    if imgui.BeginChild('##PanelToggle', { toggleButtonWidth, 60 }, false, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoBackground)) then
+    if imgui.BeginChild('##PanelToggle', { toggleButtonWidth, 60 }, ImGuiChildFlags_None, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoBackground)) then
         if imgui.InvisibleButton('##ToggleBtn', { toggleButtonWidth, 60 }) then
             boussole.config.settingsPanelVisible[1] = not isPanelVisible
             settings.save()
@@ -167,7 +167,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
         -- Create an invisible window for the panel widgets
         imgui.SetCursorPos({ panelX - windowPosX, panelY - windowPosY })
 
-        if imgui.BeginChild('##Panel', { boussole.config.panelWidth[1], panelHeight }, false, bit.bor(ImGuiWindowFlags_NoBackground, ImGuiWindowFlags_AlwaysUseWindowPadding)) then
+        if imgui.BeginChild('##Panel', { boussole.config.panelWidth[1], panelHeight }, ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoBackground) then
             local isBrowsingDifferentMap = (boussole.manualZoneId[1] ~= currentZone) or
                 (boussole.manualFloorId[1] ~= currentFloor)
 
@@ -214,8 +214,8 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
                             boussole.manualMapReload[1] = true
                         end
                     end
-                    imgui.EndChild()
                 end
+                imgui.EndChild()
                 imgui.EndCombo()
             end
             imgui.PopStyleVar()
@@ -475,7 +475,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
             imgui.Spacing()
 
             -- List of redirects at the bottom
-            if imgui.BeginChild('##RedirectList', { -1, 120 }, true) then
+            if imgui.BeginChild('##RedirectList', { -1, 120 }, ImGuiChildFlags_Border) then
                 local toRemove = nil
                 local toEdit = nil
 
@@ -540,9 +540,9 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
                         boussole.manualMapReload[1] = true
                     end
                 end
-
-                imgui.EndChild()
             end
+            imgui.EndChild()
+
             imgui.Spacing()
 
             imgui.Separator()

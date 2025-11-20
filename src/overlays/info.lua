@@ -45,10 +45,12 @@ function info_overlay.draw(windowPosX, windowPosY, contentMinX, contentMinY, map
             playerGrid = string.format('(%s-%d)', gridX, gridY)
         end
 
-        local fontSize = boussole.config.infoPanelFontSize[1] or 13
-        local fontScale = fontSize / 13.0
+        local fontScale   = boussole.config.infoPanelFontSize[1] / 13.0
+        local defaultFont = imgui.GetFont()
+        local defaultSize = imgui.GetFontSize()
+        local scaledSize  = defaultSize * fontScale
 
-        imgui.SetWindowFontScale(fontScale)
+        imgui.PushFont(defaultFont, scaledSize)
 
         local locationSizeX, locationSizeY = imgui.CalcTextSize(location)
         local gridSizeX, gridSizeY = 0, 0
@@ -94,7 +96,7 @@ function info_overlay.draw(windowPosX, windowPosY, contentMinX, contentMinY, map
             imgui.PopStyleColor()
         end
 
-        imgui.SetWindowFontScale(1.0)
+        imgui.PopFont()
     end
 end
 

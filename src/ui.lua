@@ -115,8 +115,9 @@ function ui.drawUI()
         if ui.texture_id and ui.map_texture then
             local windowPosX, windowPosY = imgui.GetWindowPos()
             local windowWidth, windowHeight = imgui.GetWindowSize()
-            local contentMinX, contentMinY = imgui.GetWindowContentRegionMin()
-            local contentMaxX, contentMaxY = imgui.GetWindowContentRegionMax()
+            local contentMinX, contentMinY = imgui.GetCursorStartPos()
+            local contentMaxX = windowWidth
+            local contentMaxY = windowHeight
 
             -- Calculate available space for map
             local availWidth = contentMaxX - contentMinX
@@ -382,11 +383,10 @@ function ui.drawUI()
                 texture.load_and_set(ui, map.current_map_data, chat, addon.name)
             end
         end
-
-        imgui.End()
     else
         imgui.PopStyleVar()
     end
+    imgui.End()
 end
 
 function ui.update()
