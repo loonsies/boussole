@@ -197,7 +197,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
                 imgui.InputText('##ZoneSearch', boussole.zoneSearch, 256)
                 imgui.Separator()
 
-                if imgui.BeginChild('##ZoneList', { 0, 200 }, false, ImGuiWindowFlags_NoBackground) then
+                if imgui.BeginChild('##ZoneList', { 0, 200 }, ImGuiChildFlags_None, ImGuiWindowFlags_NoBackground) then
                     for i, name in ipairs(filteredZoneNames) do
                         if imgui.Selectable(name, boussole.manualZoneId[1] == filteredZoneIds[i]) then
                             local newZoneId = filteredZoneIds[i]
@@ -475,7 +475,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
             imgui.Spacing()
 
             -- List of redirects at the bottom
-            if imgui.BeginChild('##RedirectList', { -1, 120 }, ImGuiChildFlags_Border) then
+            if imgui.BeginChild('##RedirectList', { -1, 120 }, ImGuiChildFlags_Borders) then
                 local toRemove = nil
                 local toEdit = nil
 
