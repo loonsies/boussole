@@ -28,6 +28,7 @@ local default = T {
     colorPanelBg = { 0.12, 0.12, 0.12, 0.85 },
     colorToggleBtn = { 0.53, 0.53, 0.53, 0.55 },
     customPoints = {},
+    enableTracker = { false },
 }
 
 config.load = function ()
