@@ -83,6 +83,28 @@ function party_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX
                         local cos_angle = math.cos(heading)
                         local sin_angle = math.sin(heading)
 
+                        -- Draw label above party member if showLabels is enabled
+                        if boussole.config.showLabels[1] then
+                            local memberName = entity.Name or ('Party ' .. i)
+                            local textWidth, textHeight = imgui.CalcTextSize(memberName)
+                            local labelX = screenX - textWidth / 2
+                            local labelY = screenY - cursorSize - textHeight - 4
+                            local padding = 4
+                            
+                            -- Draw background
+                            local bgColor = utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 })
+                            drawList:AddRectFilled(
+                                { labelX - padding, labelY - padding },
+                                { labelX + textWidth + padding, labelY + textHeight + padding },
+                                bgColor,
+                                3.0
+                            )
+                            
+                            -- Draw text with party color
+                            local textColor = utils.rgb_to_abgr(boussole.config.colorParty)
+                            drawList:AddText({ labelX, labelY }, textColor, memberName)
+                        end
+
                         local corners = {
                             { x = -halfSize, y = -halfSize }, -- Top-left
                             { x = halfSize,  y = -halfSize }, -- Top-right

@@ -664,6 +664,8 @@ local function draw_display_tab()
     if imgui.ColorEdit4('Info Panel Bg##Color', boussole.config.colorInfoPanelBg, ImGuiColorEditFlags_NoInputs) then settings.save() end
     if imgui.ColorEdit4('Panel Bg##Color', boussole.config.colorPanelBg, ImGuiColorEditFlags_NoInputs) then settings.save() end
     if imgui.ColorEdit4('Toggle Btn##Color', boussole.config.colorToggleBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Controls Btn##Color', boussole.config.colorControlsBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Controls Btn Active##Color', boussole.config.colorControlsBtnActive, ImGuiColorEditFlags_NoInputs) then settings.save() end
     imgui.Spacing()
 
     -- Info Panel

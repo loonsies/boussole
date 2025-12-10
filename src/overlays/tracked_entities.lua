@@ -106,6 +106,27 @@ function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, con
                             local displayName = entity.alias or entity.name
                             tooltip.add_line(displayName, colorU32)
                         end
+
+                        -- Draw label above marker if showLabels is enabled
+                        if boussole.config.showLabels[1] then
+                            local displayName = entity.alias or entity.name
+                            local textWidth, textHeight = imgui.CalcTextSize(displayName)
+                            local labelX = screenX - textWidth / 2
+                            local labelY = screenY - iconSize - textHeight - 4
+                            local padding = 4
+                            
+                            -- Draw background
+                            local bgColor = utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 })
+                            drawList:AddRectFilled(
+                                { labelX - padding, labelY - padding },
+                                { labelX + textWidth + padding, labelY + textHeight + padding },
+                                bgColor,
+                                3.0
+                            )
+                            
+                            -- Draw text with entity color
+                            drawList:AddText({ labelX, labelY }, colorU32, displayName)
+                        end
                     end
                 end
             end

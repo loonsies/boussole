@@ -75,6 +75,29 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
     local cos_angle = math.cos(heading)
     local sin_angle = math.sin(heading)
 
+    -- Draw label above player if showLabels is enabled
+    if boussole.config.showLabels[1] then
+        local playerName = entity.Name or 'Player'
+        local drawList = imgui.GetWindowDrawList()
+        local textWidth, textHeight = imgui.CalcTextSize(playerName)
+        local labelX = screenX - textWidth / 2
+        local labelY = screenY - cursorSize - textHeight - 4
+        local padding = 4
+        
+        -- Draw background
+        local bgColor = utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 })
+        drawList:AddRectFilled(
+            { labelX - padding, labelY - padding },
+            { labelX + textWidth + padding, labelY + textHeight + padding },
+            bgColor,
+            3.0
+        )
+        
+        -- Draw text with player color
+        local textColor = utils.rgb_to_abgr(boussole.config.colorPlayer)
+        drawList:AddText({ labelX, labelY }, textColor, playerName)
+    end
+
     local corners = {
         { x = -halfSize, y = -halfSize }, -- Top-left
         { x = halfSize,  y = -halfSize }, -- Top-right

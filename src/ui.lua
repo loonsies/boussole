@@ -13,6 +13,7 @@ local warp_overlay = require('src.overlays.warp')
 local custom_points = require('src.overlays.custom_points')
 local tracked_entities = require('src.overlays.tracked_entities')
 local tooltip = require('src.overlays.tooltip')
+local controls = require('src.overlays.controls')
 local panel = require('src.overlays.panel')
 local ffi = require('ffi')
 
@@ -101,6 +102,57 @@ function ui.save_view_state_debounce()
             ui.save_timer = current_time
         end
     end
+end
+
+-- Center map on player position
+function ui.center_on_player(mapData, availWidth, availHeight, textureWidth, textureHeight)
+    if not mapData or not mapData.entry then
+        return false
+    end
+    
+    local playerX, playerY, playerZ = map.get_player_position()
+    if not playerX then
+        return false
+    end
+    
+    -- Convert world position to map coordinates
+    local mapX, mapY = map.world_to_map_coords(mapData.entry, playerX, playerY, playerZ)
+    if not mapX or not mapY then
+        return false
+    end
+    
+    -- Convert map coordinates to texture coordinates
+    local scale = textureWidth / 512.0
+    local texX = (mapX - mapData.entry.OffsetX) * scale
+    local texY = (mapY - mapData.entry.OffsetY) * scale
+    
+    -- Calculate texture display size with zoom
+    local texWidth = textureWidth * ui.map_zoom
+    local texHeight = textureHeight * ui.map_zoom
+    
+    -- Center the texture point on screen
+    local newOffsetX = (availWidth / 2) - (texX * ui.map_zoom)
+    local newOffsetY = (availHeight / 2) - (texY * ui.map_zoom)
+    
+    -- Clamp to prevent going out of bounds
+    if texWidth > availWidth then
+        newOffsetX = math.min(0, newOffsetX)
+        newOffsetX = math.max(availWidth - texWidth, newOffsetX)
+    else
+        newOffsetX = (availWidth - texWidth) / 2
+    end
+
+    if texHeight > availHeight then
+        newOffsetY = math.min(0, newOffsetY)
+        newOffsetY = math.max(availHeight - texHeight, newOffsetY)
+    else
+        newOffsetY = (availHeight - texHeight) / 2
+    end
+    
+    ui.map_offset.x = newOffsetX
+    ui.map_offset.y = newOffsetY
+    
+    return true
 end
 
 function ui.drawUI()
@@ -296,6 +348,31 @@ function ui.drawUI()
                 ui.map_offset.y = (availHeight - texHeight) / 2
             end
 
+            -- Handle center on player mode
+            if boussole.config.centerOnPlayer[1] then
+                ui.center_on_player(map.current_map_data, availWidth, availHeight, ui.map_texture.width, ui.map_texture.height)
+            end
+            
+            -- Handle one-time recenter
+            if boussole.recenterMap then
+                ui.center_on_player(map.current_map_data, availWidth, availHeight, ui.map_texture.width, ui.map_texture.height)
+                boussole.recenterMap = false
+            end
+            
+            -- Handle zoom reset
+            if boussole.resetZoom then
+                local minZoomX = availWidth / ui.map_texture.width
+                local minZoomY = availHeight / ui.map_texture.height
+                local minZoom = math.min(minZoomX, minZoomY)
+                ui.map_zoom = minZoom
+                
+                -- Center the map after resetting zoom
+                ui.map_offset.x = (availWidth - ui.map_texture.width * ui.map_zoom) / 2
+                ui.map_offset.y = (availHeight - ui.map_texture.height * ui.map_zoom) / 2
+                
+                boussole.resetZoom = false
+            end
+
             -- Draw the map texture
             local texturePointer = tonumber(ffi.cast('uint32_t', ui.texture_id))
             if texturePointer and map.current_map_data and map.current_map_data.entry then
@@ -377,7 +454,12 @@ function ui.drawUI()
 
                 panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
 
-                tooltip.render()
+                local controlsHovered = controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
+                
+                -- Only render map tooltip if not hovering controls
+                if not controlsHovered then
+                    tooltip.render()
+                end
 
                 custom_points.draw_popup()
 
