@@ -90,7 +90,7 @@ function party_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX
                             local labelX = screenX - textWidth / 2
                             local labelY = screenY - cursorSize - textHeight - 4
                             local padding = 4
-                            
+
                             -- Draw background
                             local bgColor = utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 })
                             drawList:AddRectFilled(
@@ -99,7 +99,7 @@ function party_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX
                                 bgColor,
                                 3.0
                             )
-                            
+
                             -- Draw text with party color
                             local textColor = utils.rgb_to_abgr(boussole.config.colorParty)
                             drawList:AddText({ labelX, labelY }, textColor, memberName)

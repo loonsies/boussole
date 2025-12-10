@@ -83,7 +83,7 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
         local labelX = screenX - textWidth / 2
         local labelY = screenY - cursorSize - textHeight - 4
         local padding = 4
-        
+
         -- Draw background
         local bgColor = utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 })
         drawList:AddRectFilled(
@@ -92,7 +92,7 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
             bgColor,
             3.0
         )
-        
+
         -- Draw text with player color
         local textColor = utils.rgb_to_abgr(boussole.config.colorPlayer)
         drawList:AddText({ labelX, labelY }, textColor, playerName)

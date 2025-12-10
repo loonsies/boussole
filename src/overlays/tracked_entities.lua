@@ -114,7 +114,7 @@ function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, con
                             local labelX = screenX - textWidth / 2
                             local labelY = screenY - iconSize - textHeight - 4
                             local padding = 4
-                            
+
                             -- Draw background
                             local bgColor = utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 })
                             drawList:AddRectFilled(
@@ -123,7 +123,7 @@ function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, con
                                 bgColor,
                                 3.0
                             )
-                            
+
                             -- Draw text with entity color
                             drawList:AddText({ labelX, labelY }, colorU32, displayName)
                         end

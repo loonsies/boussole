@@ -109,31 +109,31 @@ function ui.center_on_player(mapData, availWidth, availHeight, textureWidth, tex
     if not mapData or not mapData.entry then
         return false
     end
-    
+
     local playerX, playerY, playerZ = map.get_player_position()
     if not playerX then
         return false
     end
-    
+
     -- Convert world position to map coordinates
     local mapX, mapY = map.world_to_map_coords(mapData.entry, playerX, playerY, playerZ)
     if not mapX or not mapY then
         return false
     end
-    
+
     -- Convert map coordinates to texture coordinates
     local scale = textureWidth / 512.0
     local texX = (mapX - mapData.entry.OffsetX) * scale
     local texY = (mapY - mapData.entry.OffsetY) * scale
-    
+
     -- Calculate texture display size with zoom
     local texWidth = textureWidth * ui.map_zoom
     local texHeight = textureHeight * ui.map_zoom
-    
+
     -- Center the texture point on screen
     local newOffsetX = (availWidth / 2) - (texX * ui.map_zoom)
     local newOffsetY = (availHeight / 2) - (texY * ui.map_zoom)
-    
+
     -- Clamp to prevent going out of bounds
     if texWidth > availWidth then
         newOffsetX = math.min(0, newOffsetX)
@@ -148,10 +148,10 @@ function ui.center_on_player(mapData, availWidth, availHeight, textureWidth, tex
     else
         newOffsetY = (availHeight - texHeight) / 2
     end
-    
+
     ui.map_offset.x = newOffsetX
     ui.map_offset.y = newOffsetY
-    
+
     return true
 end
 
@@ -352,24 +352,24 @@ function ui.drawUI()
             if boussole.config.centerOnPlayer[1] then
                 ui.center_on_player(map.current_map_data, availWidth, availHeight, ui.map_texture.width, ui.map_texture.height)
             end
-            
+
             -- Handle one-time recenter
             if boussole.recenterMap then
                 ui.center_on_player(map.current_map_data, availWidth, availHeight, ui.map_texture.width, ui.map_texture.height)
                 boussole.recenterMap = false
             end
-            
+
             -- Handle zoom reset
             if boussole.resetZoom then
                 local minZoomX = availWidth / ui.map_texture.width
                 local minZoomY = availHeight / ui.map_texture.height
                 local minZoom = math.min(minZoomX, minZoomY)
                 ui.map_zoom = minZoom
-                
+
                 -- Center the map after resetting zoom
                 ui.map_offset.x = (availWidth - ui.map_texture.width * ui.map_zoom) / 2
                 ui.map_offset.y = (availHeight - ui.map_texture.height * ui.map_zoom) / 2
-                
+
                 boussole.resetZoom = false
             end
 
@@ -455,7 +455,7 @@ function ui.drawUI()
                 panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
 
                 local controlsHovered = controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
-                
+
                 -- Only render map tooltip if not hovering controls
                 if not controlsHovered then
                     tooltip.render()
