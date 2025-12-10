@@ -89,7 +89,6 @@ ashita.events.register('load', 'load_cb', function ()
                 end
             end
         else
-            print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
             map.clear_map_cache()
             texture.load_and_set(ui, nil, chat, addon.name)
         end
@@ -124,7 +123,6 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
                 if mapData then
                     texture.load_and_set(ui, mapData, chat, addon.name)
                 else
-                    print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
                     map.clear_map_cache()
                     texture.load_and_set(ui, nil, chat, addon.name)
                 end
@@ -184,7 +182,6 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                     boussole.trackerSearch = { '' }
                 end
             else
-                print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
                 map.clear_map_cache()
                 texture.load_and_set(ui, nil, chat, addon.name)
                 boussole.last_floor_id = nil
