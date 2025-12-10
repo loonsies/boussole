@@ -7,6 +7,24 @@ local imgui = require('imgui')
 local settings = require('settings')
 local chat = require('chat')
 local utils = require('src.utils')
+local tracker = require('src.tracker')
+
+-- Helper function to format entity identifier based on selected type
+local function format_identifier(entity)
+    local identifierType = boussole.config.trackerIdentifierType or 'Index (Hex)'
+    local index = entity.index or bit.band(entity.id, 0x7FF)
+
+    if identifierType == 'Index (Decimal)' then
+        return string.format('[%d]', index)
+    elseif identifierType == 'Index (Hex)' then
+        return string.format('[%X]', index)
+    elseif identifierType == 'Id (Decimal)' then
+        return string.format('[%d]', entity.id)
+    elseif identifierType == 'Id (Hex)' then
+        return string.format('[%X]', entity.id)
+    end
+    return string.format('[%X]', index) -- Default to Index (Hex)
+end
 
 local function draw_map_tab_tracker(selZoneId)
     if not boussole.config.enableTracker[1] then
@@ -17,9 +35,436 @@ local function draw_map_tab_tracker(selZoneId)
     imgui.Text('Tracker')
     imgui.Spacing()
 
-    if imgui.Button('Send Tracker Packet', { -1, 0 }) then
+
+    -- Profile management
+    imgui.SetNextItemWidth(150)
+
+    local profiles = tracker.get_profiles()
+    local profileNames = { 'None' }
+    for name, _ in pairs(profiles) do
+        table.insert(profileNames, name)
     end
+    table.sort(profileNames, function (a, b)
+        if a == 'None' then return true end
+        if b == 'None' then return false end
+        return a < b
+    end)
+
+    local currentProfile = boussole.config.lastLoadedTrackerProfile or ''
+    local selectedProfileIdx = 1
+    for i, name in ipairs(profileNames) do
+        if name == currentProfile then
+            selectedProfileIdx = i
+            break
+        end
+    end
+
+    if imgui.BeginCombo('##TrackerProfile', profileNames[selectedProfileIdx] or 'None') then
+        for i, name in ipairs(profileNames) do
+            if imgui.Selectable(name, selectedProfileIdx == i) then
+                if name == 'None' then
+                    boussole.config.lastLoadedTrackerProfile = ''
+                    tracker.clear_all()
+                else
+                    tracker.load_profile(name)
+                    boussole.config.lastLoadedTrackerProfile = name
+                end
+                settings.save()
+
+                boussole.trackedSearchResults = {}
+            end
+        end
+        imgui.EndCombo()
+    end
+
+    imgui.SameLine()
+    if imgui.Button('Save', { 50, 0 }) then
+        if currentProfile ~= '' then
+            tracker.save_profile(currentProfile)
+            tracker.save_tracker_data()
+        else
+            imgui.OpenPopup('Save profile')
+        end
+    end
+
+    -- Save profile modal
+    if imgui.BeginPopupModal('Save profile', nil, 0) then
+        if not boussole.trackerNewProfileName then
+            boussole.trackerNewProfileName = { '' }
+        end
+        imgui.Text('Enter profile name:')
+        imgui.SetNextItemWidth(-1)
+        imgui.InputText('##NewProfileName', boussole.trackerNewProfileName, 64)
+
+        if imgui.Button('Save', { 80, 0 }) then
+            local name = boussole.trackerNewProfileName[1]
+            if name and name ~= '' then
+                tracker.save_profile(name)
+                boussole.config.lastLoadedTrackerProfile = name
+                settings.save()
+                tracker.save_tracker_data()
+                imgui.CloseCurrentPopup()
+            end
+        end
+        imgui.SameLine()
+        if imgui.Button('Cancel', { 80, 0 }) then
+            imgui.CloseCurrentPopup()
+        end
+        imgui.EndPopup()
+    end
+
+    imgui.SameLine()
+    if imgui.Button('Del', { 50, 0 }) then
+        if currentProfile ~= '' then
+            tracker.delete_profile(currentProfile)
+            boussole.config.lastLoadedTrackerProfile = ''
+            settings.save()
+            tracker.save_tracker_data()
+        end
+    end
+
     imgui.Spacing()
+    imgui.Separator()
+
+    -- Tracker tabs
+    if imgui.BeginTabBar('##TrackerTabs') then
+        -- Zone List Tab
+        if imgui.BeginTabItem('Zone list') then
+            -- Initialize zone entities if not loaded
+            local zoneEntities = tracker.get_zone_entities()
+            local hasEntities = false
+            for _ in pairs(zoneEntities) do
+                hasEntities = true
+                break
+            end
+
+            if not hasEntities then
+                local currentZone = map.get_player_zone()
+                if currentZone then
+                    tracker.load_zone_entities(currentZone, 0)
+                    zoneEntities = tracker.get_zone_entities()
+                end
+            end
+
+            -- Initialize search results with all entities if empty and no search is active
+            if not boussole.trackerSearchResults or (#boussole.trackerSearchResults == 0 and boussole.trackerSearch[1] == '') then
+                boussole.trackerSearchResults = {}
+                for id, entity in pairs(zoneEntities) do
+                    table.insert(boussole.trackerSearchResults, entity)
+                end
+                table.sort(boussole.trackerSearchResults, function (a, b)
+                    return a.name < b.name
+                end)
+            end
+
+            imgui.Text(string.format('Search (%d)', #boussole.trackerSearchResults))
+            imgui.SetNextItemWidth(-1)
+            if imgui.InputText('##TrackerSearch', boussole.trackerSearch, 256) then
+                -- Update search results
+                boussole.trackerSearchResults = {}
+                local searchText = boussole.trackerSearch[1]:lower()
+
+                for id, entity in pairs(zoneEntities) do
+                    if searchText == '' or entity.name:lower():find(searchText, 1, true) then
+                        table.insert(boussole.trackerSearchResults, entity)
+                    end
+                end
+
+                table.sort(boussole.trackerSearchResults, function (a, b)
+                    return a.name < b.name
+                end)
+            end
+
+            if imgui.Button('Add all', { -1, 0 }) then
+                local added = 0
+                local existing = 0
+                for _, entity in ipairs(boussole.trackerSearchResults) do
+                    local result = tracker.add_entity(entity.id, entity.name, entity.name)
+                    if result == true then
+                        added = added + 1
+                    elseif result == 'exists' then
+                        existing = existing + 1
+                    end
+                end
+                if added > 0 or existing > 0 then
+                    if existing > 0 then
+                        print(chat.header(addon.name):append(chat.message(string.format('Added %d entities to tracking. %d already tracked.', added, existing))))
+                    else
+                        print(chat.header(addon.name):append(chat.message(string.format('Added %d entities to tracking.', added))))
+                    end
+                    boussole.trackedSearchResults = {}
+                end
+            end
+            imgui.Spacing()
+
+            -- Calculate remaining height for the list
+            local _, remainingHeight = imgui.GetContentRegionAvail()
+            local buttonsHeight = imgui.GetFrameHeightWithSpacing() * 2 + 10
+            if imgui.BeginChild('##ZoneEntityList', { -1, remainingHeight - buttonsHeight }, ImGuiChildFlags_Borders) then
+                if imgui.BeginTable('##ZoneEntityTable', 2, 0) then
+                    imgui.TableSetupColumn('##Name', 0, 0.85)
+                    imgui.TableSetupColumn('##Add', 0, 0.15)
+
+                    for i, entity in ipairs(boussole.trackerSearchResults) do
+                        imgui.TableNextRow()
+                        imgui.TableSetColumnIndex(0)
+
+                        local itemHeight = imgui.GetTextLineHeight()
+                        local identifier = format_identifier(entity)
+                        local displayText = string.format('%s %s', entity.name, identifier)
+                        local isSelected = boussole.trackerSelections[entity.id] or false
+                        if imgui.Selectable(displayText .. '##ZoneEnt' .. entity.id, isSelected, 0, { 0, itemHeight }) then
+                            -- Toggle selection on click using entity ID
+                            boussole.trackerSelections[entity.id] = not boussole.trackerSelections[entity.id]
+                            boussole.trackerSelection = i
+                        end
+
+                        imgui.TableSetColumnIndex(1)
+                        imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 })
+                        if imgui.Button('+##Add' .. entity.id, { -1, itemHeight }) then
+                            local result = tracker.add_entity(entity.id, entity.name, entity.name)
+                            if result == true then
+                                print(chat.header(addon.name):append(chat.message(string.format('Added %s to tracking.', entity.name))))
+                                boussole.trackedSearchResults = {}
+                            elseif result == 'exists' then
+                                print(chat.header(addon.name):append(chat.message(string.format('%s is already being tracked.', entity.name))))
+                            end
+                        end
+                        imgui.PopStyleVar()
+                    end
+
+                    imgui.EndTable()
+                end
+            end
+            imgui.EndChild()
+
+            imgui.Spacing()
+
+            local selectionCount = 0
+            for _, selected in pairs(boussole.trackerSelections) do
+                if selected then selectionCount = selectionCount + 1 end
+            end
+
+            if imgui.Button(string.format('Track selection (%d)', selectionCount), { -1, 0 }) then
+                local added = 0
+                local existing = 0
+                local zoneEntities = tracker.get_zone_entities()
+                for entityId, selected in pairs(boussole.trackerSelections) do
+                    if selected and zoneEntities[entityId] then
+                        local entity = zoneEntities[entityId]
+                        local result = tracker.add_entity(entity.id, entity.name, entity.name)
+                        if result == true then
+                            added = added + 1
+                        elseif result == 'exists' then
+                            existing = existing + 1
+                        end
+                    end
+                end
+                if added > 0 or existing > 0 then
+                    if existing > 0 then
+                        print(chat.header(addon.name):append(chat.message(string.format('Added %d entities to tracking. %d already tracked.', added, existing))))
+                    else
+                        print(chat.header(addon.name):append(chat.message(string.format('Added %d entities to tracking.', added))))
+                    end
+                    boussole.trackedSearchResults = {}
+                end
+            end
+
+            if imgui.Button(string.format('Clear selection (%d)', selectionCount), { -1, 0 }) then
+                boussole.trackerSelections = {}
+                boussole.trackerSelection = -1
+            end
+
+            imgui.EndTabItem()
+        end
+
+        local trackedEntities = tracker.get_tracked_entities()
+        local sortedTracked = {}
+        local currentZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
+
+        for _, entity in pairs(trackedEntities) do
+            if entity.zoneId == currentZone then
+                table.insert(sortedTracked, entity)
+            end
+        end
+
+        table.sort(sortedTracked, function (a, b)
+            return a.name < b.name
+        end)
+
+        -- Active Tracking Tab
+        if imgui.BeginTabItem('Tracked') then
+            -- Initialize tracked search if needed
+            if not boussole.trackedSearch then
+                boussole.trackedSearch = { '' }
+            end
+
+            -- Search bar
+            imgui.Text(string.format('Search (%d)', boussole.trackedSearchResults and #boussole.trackedSearchResults or 0))
+            imgui.SetNextItemWidth(-1)
+            if imgui.InputText('##TrackedSearch', boussole.trackedSearch, 256) then
+                -- Update search results
+                boussole.trackedSearchResults = {}
+                local searchText = boussole.trackedSearch[1]:lower()
+
+                for _, entity in ipairs(sortedTracked) do
+                    local displayName = entity.alias ~= entity.name and
+                        string.format('%s (%s)', entity.name, entity.alias) or entity.name
+                    if searchText == '' or displayName:lower():find(searchText, 1, true) then
+                        table.insert(boussole.trackedSearchResults, entity)
+                    end
+                end
+            end
+
+            -- Initialize search results with all entities if empty and no search is active
+            if not boussole.trackedSearchResults or (#boussole.trackedSearchResults == 0 and boussole.trackedSearch[1] == '') then
+                boussole.trackedSearchResults = {}
+                for _, entity in ipairs(sortedTracked) do
+                    table.insert(boussole.trackedSearchResults, entity)
+                end
+            end
+
+            imgui.Spacing()
+
+            -- Calculate height needed for controls below the list
+            local controlsHeight = 0
+            -- Two buttons (Single packet all, Clear all)
+            controlsHeight = controlsHeight + imgui.GetFrameHeightWithSpacing() * 2
+            -- Spacing after list
+            controlsHeight = controlsHeight + 5
+            -- Selected entity controls if any selected
+            if boussole.trackedSelection > 0 and boussole.trackedSelection <= #boussole.trackedSearchResults then
+                -- Separator, text header, spacing, alias input, color edit, 3 checkboxes, spacing, 2 buttons
+                controlsHeight = controlsHeight + imgui.GetFrameHeightWithSpacing() * 10 + 40
+            end
+
+            local _, availHeight = imgui.GetContentRegionAvail()
+            local listHeight = availHeight - controlsHeight
+
+            if imgui.BeginChild('##TrackedEntityList', { -1, listHeight }, ImGuiChildFlags_Borders) then
+                if imgui.BeginTable('##TrackedEntityTable', 2, 0) then
+                    imgui.TableSetupColumn('##Name', 0, 0.85)
+                    imgui.TableSetupColumn('##Remove', 0, 0.15)
+
+                    for i, entity in ipairs(boussole.trackedSearchResults) do
+                        imgui.TableNextRow()
+                        imgui.TableSetColumnIndex(0)
+
+                        local displayName = entity.alias ~= entity.name and
+                            string.format('%s (%s)', entity.name, entity.alias) or entity.name
+                        local identifier = format_identifier(entity)
+                        displayName = string.format('%s %s', displayName, identifier)
+
+                        local itemHeight = imgui.GetTextLineHeight()
+                        if imgui.Selectable(displayName .. '##Tracked' .. entity.id, boussole.trackedSelection == i, 0, { 0, itemHeight }) then
+                            boussole.trackedSelection = i
+                        end
+
+                        imgui.TableSetColumnIndex(1)
+                        imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 })
+                        if imgui.Button('-##Rem' .. entity.id, { -1, itemHeight }) then
+                            tracker.remove_entity(entity.id)
+                            if boussole.trackedSelection == i then
+                                boussole.trackedSelection = -1
+                            end
+                            boussole.trackedSearchResults = {}
+                        end
+                        imgui.PopStyleVar()
+                    end
+
+                    imgui.EndTable()
+                end
+            end
+            imgui.EndChild()
+
+            imgui.Spacing()
+
+            -- Packet controls
+            local isSending = tracker.is_sending_packets()
+            if not isSending then
+                if imgui.Button('Single packet all', { -1, 0 }) then
+                    tracker.send_all_packets()
+                end
+            else
+                imgui.TextColored({ 1.0, 0.5, 0.2, 1.0 }, 'Sending packets...')
+            end
+
+            if imgui.Button('Clear all', { -1, 0 }) then
+                tracker.clear_all()
+                boussole.trackedSelection = -1
+                -- Clear tracked search results to trigger refresh
+                boussole.trackedSearchResults = {}
+            end
+
+            -- Selected entity controls
+            if boussole.trackedSelection > 0 and boussole.trackedSelection <= #boussole.trackedSearchResults then
+                local entity = boussole.trackedSearchResults[boussole.trackedSelection]
+
+                imgui.Spacing()
+                imgui.Separator()
+                imgui.Text('Selected entity')
+                imgui.Spacing()
+
+                -- Alias
+                if not boussole.trackerAliasBuffer then
+                    boussole.trackerAliasBuffer = { entity.alias }
+                else
+                    boussole.trackerAliasBuffer[1] = entity.alias
+                end
+
+                if imgui.InputText('Alias##TrackerAlias', boussole.trackerAliasBuffer, 256) then
+                    tracker.update_entity(entity.id, { alias = boussole.trackerAliasBuffer[1] })
+                end
+
+                -- Color
+                local colors = { entity.color[1], entity.color[2], entity.color[3], entity.color[4] }
+                if imgui.ColorEdit4('Color##TrackerColor', colors, 0) then
+                    tracker.update_entity(entity.id, { color = colors })
+                end
+
+                -- Options
+                local alarm = { entity.alarm }
+                if imgui.Checkbox('Alarm##TrackerAlarm', alarm) then
+                    tracker.update_entity(entity.id, { alarm = alarm[1] })
+                end
+
+                local draw = { entity.draw }
+                if imgui.Checkbox('Show on map##TrackerDraw', draw) then
+                    tracker.update_entity(entity.id, { draw = draw[1] })
+                end
+
+                local widescan = { entity.widescan }
+                if imgui.Checkbox('Auto widescan##TrackerWidescan', widescan) then
+                    tracker.update_entity(entity.id, { widescan = widescan[1] })
+                end
+
+                imgui.Spacing()
+
+                -- Timeout setting
+                local timeout = { entity.timeout or 0 }
+                if imgui.InputInt('Timeout##TrackerTimeout', timeout, 10, 60) then
+                    if timeout[1] < 0 then timeout[1] = 0 end
+                    tracker.update_entity(entity.id, { timeout = timeout[1] })
+                end
+                imgui.ShowHelp('After this many seconds without position updates, remove entity from map. Set to 0 to never timeout.', true)
+
+                imgui.Spacing()
+
+                -- Packet controls for selected entity
+                if imgui.Button('Single packet', { -1, 0 }) then
+                    tracker.send_single_packet(entity.id)
+                end
+
+                if imgui.Button('Single widescan', { -1, 0 }) then
+                    tracker.send_widescan(entity.id)
+                end
+            end
+
+            imgui.EndTabItem()
+        end
+
+        imgui.EndTabBar()
+    end
 end
 
 local function draw_map_tab(currentZone, currentFloor, selectedZoneName, filteredZoneIds, filteredZoneNames, selZoneId)
@@ -139,6 +584,9 @@ local function draw_display_tab()
         settings.save()
     end
     if imgui.Checkbox('Alliance members', boussole.config.showAlliance) then
+        settings.save()
+    end
+    if boussole.config.enableTracker[1] and imgui.Checkbox('Tracked Entities', boussole.config.showTrackedEntities) then
         settings.save()
     end
     imgui.Spacing()
@@ -422,6 +870,42 @@ local function draw_misc_tab(selZoneId)
     end
     imgui.ShowHelp('Enables the tracker feature, which allows sending packets manually to get entities positions. USE WITH CAUTION, it\'s literally cheating, so you put your account at risk.', true)
     imgui.Spacing()
+
+    -- Tracker settings (only show if tracker is enabled)
+    if boussole.config.enableTracker[1] then
+        imgui.Separator()
+        imgui.Text('Tracker settings')
+        imgui.Spacing()
+
+        -- Packet delay control
+        imgui.Text('Packet delay (seconds):')
+        imgui.SetNextItemWidth(-1)
+        if imgui.SliderFloat('##TrackerPacketDelay', boussole.config.trackerPacketDelay, 0.4, 300.0, '%.1f') then
+            settings.save()
+        end
+
+        -- Identifier type dropdown
+        imgui.Text('Identifier type:')
+        imgui.SetNextItemWidth(-1)
+        local identifierTypes = { 'Index (Decimal)', 'Index (Hex)', 'Id (Decimal)', 'Id (Hex)' }
+        if imgui.BeginCombo('##TrackerIdentifierType', boussole.config.trackerIdentifierType) then
+            for _, idType in ipairs(identifierTypes) do
+                if imgui.Selectable(idType, boussole.config.trackerIdentifierType == idType) then
+                    boussole.config.trackerIdentifierType = idType
+                    settings.save()
+                end
+            end
+            imgui.EndCombo()
+        end
+
+        -- Default color picker
+        imgui.Text('Default entity color:')
+        imgui.SetNextItemWidth(-1)
+        if imgui.ColorEdit4('##TrackerDefaultColor', boussole.config.trackerDefaultColor, 0) then
+            settings.save()
+        end
+        imgui.Spacing()
+    end
 
     local ui = require('src.ui')
     if imgui.Button('Export map as BMP', { -1, 0 }) then

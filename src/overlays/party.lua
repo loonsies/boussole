@@ -65,7 +65,7 @@ function party_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX
             if entityIndex and entityIndex > 0 then
                 local entity = GetEntity(entityIndex)
 
-                if entity and entity.RenderFlags0 ~= 0 then
+                if entity and entity.Render.Flags0 ~= 0 then
                     local memberX = entity.Movement.LastPosition.X
                     local memberY = entity.Movement.LastPosition.Y
                     local memberZ = entity.Movement.LastPosition.Z

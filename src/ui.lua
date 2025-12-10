@@ -11,6 +11,7 @@ local party_overlay = require('src.overlays.party')
 local alliance_overlay = require('src.overlays.alliance')
 local warp_overlay = require('src.overlays.warp')
 local custom_points = require('src.overlays.custom_points')
+local tracked_entities = require('src.overlays.tracked_entities')
 local tooltip = require('src.overlays.tooltip')
 local panel = require('src.overlays.panel')
 local ffi = require('ffi')
@@ -338,6 +339,11 @@ function ui.drawUI()
                     ui.map_zoom, ui.map_texture.width)
 
                 custom_points.draw(map.current_map_data, windowPosX, windowPosY,
+                    contentMinX, contentMinY,
+                    ui.map_offset.x, ui.map_offset.y,
+                    ui.map_zoom, ui.map_texture.width)
+
+                tracked_entities.draw(map.current_map_data, windowPosX, windowPosY,
                     contentMinX, contentMinY,
                     ui.map_offset.x, ui.map_offset.y,
                     ui.map_zoom, ui.map_texture.width)

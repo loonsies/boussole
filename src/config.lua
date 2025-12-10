@@ -8,6 +8,7 @@ local default = T {
     showPlayer = { true },
     showParty = { true },
     showAlliance = { true },
+    showTrackedEntities = { true },
     useCustomMaps = { false },
     settingsPanelVisible = { false },
     mapViews = {},
@@ -19,6 +20,7 @@ local default = T {
     iconSizeParty = { 20 },
     iconSizeAlliance = { 20 },
     infoPanelFontSize = { 13 },
+    iconSizeTrackedEntity = { 10 },
     colorHomepoint = { 0.0, 1.0, 1.0, 1.0 },
     colorSurvivalGuide = { 1.0, 0.667, 0.0, 1.0 },
     colorPlayer = { 1.0, 0.0, 0.0, 1.0 },
@@ -29,6 +31,10 @@ local default = T {
     colorToggleBtn = { 0.53, 0.53, 0.53, 0.55 },
     customPoints = {},
     enableTracker = { false },
+    lastLoadedTrackerProfile = '',
+    trackerPacketDelay = { 1.5 },
+    trackerIdentifierType = 'Index (Hex)',
+    trackerDefaultColor = { 0.0, 0.5, 0.25, 1.0 },
 }
 
 config.load = function ()

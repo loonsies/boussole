@@ -1,5 +1,5 @@
 addon.name = 'boussole'
-addon.version = "1.00"
+addon.version = '1.00'
 addon.author = 'looney'
 addon.desc = 'Replacement for in-game map with additional features.'
 addon.link = 'https://github.com/loonsies/boussole'
@@ -11,10 +11,10 @@ local settings = require('settings')
 local commands = require('src.commands')
 local config = require('src.config')
 local ui = require('src.ui')
---local packets = require('src.packets')
 local map = require('src.map')
 local texture = require('src.texture')
 local warp_points = require('src.warp_points')
+local tracker = require('src.tracker')
 
 boussole = {
     config = {},
@@ -35,7 +35,12 @@ boussole = {
         offsetX = { 0 },
         offsetY = { 0 },
         editingKey = nil
-    }
+    },
+    trackerSearch = { '' },
+    trackerSearchResults = {},
+    trackerSelection = -1,
+    trackerSelections = {},
+    trackedSelection = -1
 }
 
 ashita.events.register('load', 'load_cb', function ()
@@ -45,6 +50,9 @@ ashita.events.register('load', 'load_cb', function ()
 
     -- Initialize warp point data
     warp_points.init()
+
+    -- Load tracker profile data
+    tracker.load_tracker_data()
 
     settings.register('settings', 'settings_update_cb', function (newConfig)
         boussole.config = newConfig
@@ -70,6 +78,16 @@ ashita.events.register('load', 'load_cb', function ()
             if currentZone then
                 boussole.manualZoneId[1] = currentZone
             end
+
+            -- Load zone entities for tracker
+            if boussole.config.enableTracker[1] then
+                tracker.load_zone_entities(currentZone, boussole.last_floor_id)
+
+                if boussole.config.lastLoadedTrackerProfile and boussole.config.lastLoadedTrackerProfile ~= '' then
+                    tracker.load_profile(boussole.config.lastLoadedTrackerProfile)
+                    boussole.trackedSearchResults = nil
+                end
+            end
         else
             print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
             map.clear_map_cache()
@@ -80,10 +98,17 @@ end)
 
 ashita.events.register('unload', 'unload_cb', function ()
     ui.save_view_state()
+    tracker.save_tracker_data()
     settings.save()
 end)
 
 ashita.events.register('d3d_present', 'd3d_present_cb', function ()
+    -- Process tracker packet queue
+    if boussole.config.enableTracker[1] then
+        tracker.process_packet_queue()
+        tracker.process_timeouts()
+    end
+
     -- Check for floor changes every 1 second
     local current_time = os.clock()
     if current_time - boussole.last_floor_check_time >= 1.0 then
@@ -131,6 +156,7 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
         ashita.tasks.once(1, function ()
             local mapData, err = map.load_current_map_dat()
             if mapData then
+                tracker.handle_zone_change()
                 texture.load_and_set(ui, mapData, chat, addon.name)
 
                 -- Update floor ID after zone change
@@ -150,6 +176,13 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                         boussole.manualFloorId[1] = boussole.last_floor_id
                     end
                 end
+
+                -- Load zone entities for tracker
+                if boussole.config.enableTracker[1] then
+                    tracker.load_zone_entities(currentZone, boussole.last_floor_id)
+                    boussole.trackerSearchResults = {}
+                    boussole.trackerSearch = { '' }
+                end
             else
                 print(chat.header(addon.name):append(chat.warning(string.format('No map available for this floor: %s', tostring(err)))))
                 map.clear_map_cache()
@@ -157,5 +190,30 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                 boussole.last_floor_id = nil
             end
         end)
+    end
+
+    -- Handle entity update packets for tracker
+    if boussole.config.enableTracker[1] then
+        if e.id == 0x00E then
+            tracker.handle_entity_update(e)
+
+            -- Cache position data if present
+            if bit.band(struct.unpack('B', e.data, 0x0A + 1), 0x01) == 0x01 then
+                local index = struct.unpack('H', e.data, 0x08 + 1)
+                local x = struct.unpack('f', e.data, 0x0C + 1)
+                local y = struct.unpack('f', e.data, 0x14 + 1)
+                local z = struct.unpack('f', e.data, 0x10 + 1)
+                tracker.cache_position(index, x, y, z)
+            end
+        end
+
+        -- Handle position packet (0xF5)
+        if e.id == 0xF5 then
+            local index = struct.unpack('H', e.data, 0x12 + 1)
+            local x = struct.unpack('f', e.data, 0x04 + 1)
+            local y = struct.unpack('f', e.data, 0x0C + 1)
+            local z = struct.unpack('f', e.data, 0x08 + 1)
+            tracker.cache_position(index, x, y, z)
+        end
     end
 end)
