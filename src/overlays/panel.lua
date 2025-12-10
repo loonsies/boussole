@@ -26,7 +26,7 @@ local function format_identifier(entity)
     return string.format('[%X]', index) -- Default to Index (Hex)
 end
 
-local function draw_map_tab_tracker(selZoneId)
+local function draw_map_tab_tracker()
     if not boussole.config.enableTracker[1] then
         return
     end
@@ -560,7 +560,7 @@ local function draw_map_tab(currentZone, currentFloor, selectedZoneName, filtere
     -- Set dropdown state based on whether any dropdown is open
     boussole.dropdownOpened = zoneComboOpened or floorComboOpened
 
-    draw_map_tab_tracker(selZoneId)
+    draw_map_tab_tracker()
 end
 
 local function draw_display_tab()
