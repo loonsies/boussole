@@ -25,6 +25,7 @@ boussole = {
     zoneSearch = { '' },
     manualZoneId = { 0 },
     manualFloorId = { 0 },
+    last_sub_zone_id = 0,
     dropdownOpened = false,
     panelHovered = false,
     redirectState = {
@@ -73,15 +74,21 @@ ashita.events.register('load', 'load_cb', function ()
                 end
             end
 
-            -- Set manual zone selection to current zone
-            local currentZone = map.get_player_zone()
+            -- Set manual zone selection to current zone / subzone from memory
+            local currentZone, currentSubZone = tracker.get_current_zone_and_subzone()
+            if not currentZone then
+                currentZone = map.get_player_zone()
+            end
+
             if currentZone then
                 boussole.manualZoneId[1] = currentZone
             end
 
+            boussole.last_sub_zone_id = currentSubZone or 0
+
             -- Load zone entities for tracker
-            if boussole.config.enableTracker[1] then
-                tracker.load_zone_entities(currentZone, boussole.last_floor_id)
+            if boussole.config.enableTracker[1] and currentZone then
+                tracker.load_zone_entities(currentZone, currentSubZone)
 
                 if boussole.config.lastLoadedTrackerProfile and boussole.config.lastLoadedTrackerProfile ~= '' then
                     tracker.load_profile(boussole.config.lastLoadedTrackerProfile)
@@ -151,6 +158,11 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
         end
 
         -- Zone change detected - load new map data
+        -- Parse zone and subzone from the zone change packet (matches ScentHound offsets)
+        local newZone = struct.unpack('H', e.data, 0x30 + 1)
+        local newSubZone = struct.unpack('H', e.data, 0x9E + 1)
+        boussole.last_sub_zone_id = newSubZone or 0
+
         ashita.tasks.once(1, function ()
             local mapData, err = map.load_current_map_dat()
             if mapData then
@@ -167,17 +179,16 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                 end
 
                 -- Update manual zone and floor selections to current after zone change
-                local currentZone = map.get_player_zone()
-                if currentZone then
-                    boussole.manualZoneId[1] = currentZone
+                if newZone then
+                    boussole.manualZoneId[1] = newZone
                     if boussole.last_floor_id then
                         boussole.manualFloorId[1] = boussole.last_floor_id
                     end
                 end
 
-                -- Load zone entities for tracker
-                if boussole.config.enableTracker[1] then
-                    tracker.load_zone_entities(currentZone, boussole.last_floor_id)
+                -- Load zone entities for tracker using proper subzone
+                if boussole.config.enableTracker[1] and newZone then
+                    tracker.load_zone_entities(newZone, newSubZone)
                     boussole.trackerSearchResults = {}
                     boussole.trackerSearch = { '' }
                 end

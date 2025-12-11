@@ -15,6 +15,30 @@ local locationCache = {}
 local currentProfile = nil
 local profiles = {}
 local currentZoneId = 0
+local currentSubZoneId = 0
+
+local mem = ashita.memory
+
+local function detect_zone_and_subzone()
+    local zonePointer = mem.find('FFXiMain.dll', 0, '8B0D????????8B44240425FFFF00003B', 0x02, 0x00)
+    if zonePointer == 0 then
+        return nil, nil
+    end
+
+    local pointer = mem.read_uint32(zonePointer)
+    if pointer == 0 then
+        return nil, nil
+    end
+
+    pointer = mem.read_uint32(pointer + 0x04)
+    if pointer == 0 then
+        return nil, nil
+    end
+
+    local zone = mem.read_uint32(pointer + 0x3C2E0)
+    local subZone = mem.read_uint16(pointer + 0x3C2EA)
+    return zone, subZone
+end
 
 -- Degree map for direction calculation
 local degreeMap = {
@@ -70,16 +94,19 @@ end
 function tracker.load_zone_entities(zoneId, subZoneId)
     zoneEntities = {}
     currentZoneId = zoneId
+    currentSubZoneId = subZoneId
 
     local dats = require('ffxi.dats')
     local file = dats.get_zone_npclist(zoneId, subZoneId)
 
     if file == nil or file:len() == 0 then
+        print(chat.header('boussole'):append(chat.error(string.format('Failed to determine zone entity DAT file. [zid: %d, sid: %d]', zoneId, subZoneId))))
         return
     end
 
     local f = io.open(file, 'rb')
     if f == nil then
+        print(chat.header('boussole'):append(chat.error(string.format('Failed to access zone entity DAT file. [zid: %d, sid: %d]', zoneId, subZoneId))))
         return
     end
 
@@ -88,9 +115,11 @@ function tracker.load_zone_entities(zoneId, subZoneId)
 
     if size == 0 or ((size - math.floor(size / 0x20) * 0x20) ~= 0) then
         f:close()
+        print(chat.header('boussole'):append(chat.error(string.format('Failed to validate zone entity DAT file. [zid: %d, sid: %d]', zoneId, subZoneId))))
         return
     end
 
+    local count = 0
     for _ = 0, ((size / 0x20) - 0x01) do
         local data = f:read(0x20)
         local name, id = struct.unpack('c28L', data)
@@ -102,6 +131,7 @@ function tracker.load_zone_entities(zoneId, subZoneId)
                 name = name,
                 index = bit.band(id, 0x7FF)
             }
+            count = count + 1
         end
     end
 
@@ -111,6 +141,15 @@ end
 -- Get zone entities
 function tracker.get_zone_entities()
     return zoneEntities
+end
+
+function tracker.get_current_zone_and_subzone()
+    if currentZoneId ~= 0 then
+        return currentZoneId, currentSubZoneId
+    end
+
+    local zid, sid = detect_zone_and_subzone()
+    return zid, sid
 end
 
 -- Get tracked entities
@@ -373,6 +412,9 @@ end
 -- Handle zone change
 function tracker.handle_zone_change()
     tracker.clear_zone_data()
+    zoneEntities = {}
+    currentZoneId = 0
+    currentSubZoneId = 0
 
     -- Clear packet queue and notify if packets were queued
     if tracker.is_sending_packets() then
