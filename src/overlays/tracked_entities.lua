@@ -71,8 +71,14 @@ function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, con
                         end
 
                         -- Convert map coordinates to texture coordinates
-                        local texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-                        local texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                        local texX, texY
+                        if mapData.entry._isCustomMap then
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+                        else
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                        end
 
                         -- Convert texture coordinates to screen coordinates
                         local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom

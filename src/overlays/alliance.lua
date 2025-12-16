@@ -73,8 +73,14 @@ function alliance_overlay.draw(config, mapData, windowPosX, windowPosY, contentM
                     local mapX, mapY = map.world_to_map_coords(mapData.entry, memberX, memberY, memberZ)
 
                     if mapX then
-                        local texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-                        local texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                        local texX, texY
+                        if mapData.entry._isCustomMap then
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+                        else
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                        end
 
                         local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
                         local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom

@@ -58,8 +58,15 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
     local mapX, mapY = map.world_to_map_coords(mapData.entry, playerX, playerY, playerZ)
     if not mapX then return end
 
-    local texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-    local texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+    local texX, texY
+    if mapData.entry._isCustomMap then
+        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+    else
+        -- Standard maps: convert from map space to texture space
+        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+    end
 
     local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
     local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
@@ -161,8 +168,15 @@ function player_overlay.draw_dot(mapData, windowPosX, windowPosY, contentMinX, c
     if not mapX then return end
 
     -- Convert map coordinates to texture pixel coordinates
-    local texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-    local texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+    local texX, texY
+    if mapData.entry._isCustomMap then
+        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+    else
+        -- Standard maps: convert from map space to texture space
+        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+    end
 
     -- Convert to screen coordinates
     local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom

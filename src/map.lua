@@ -3,6 +3,7 @@ local map = {}
 local mem = ashita.memory
 local ffi = require('ffi')
 local zonesFloors = require('data.zonesFloors')
+local customMaps = require('data.maps')
 
 local MAP_TABLE_SIG = '8A0D????????5333C05684C95774??8A5424188B7424148B7C2410B9'
 local ENTRY_SIZE = 0x0E
@@ -52,7 +53,37 @@ function map.init_floor_function()
     return true
 end
 
+-- Check if position is within custom map floor boundaries
+function map.get_custom_floor_id(zoneId, x, y, z)
+    local zoneData = customMaps[zoneId]
+    if not zoneData then
+        return nil -- No custom map data for this zone
+    end
+
+    -- Check each floor's boundaries
+    for floorId, floorData in pairs(zoneData) do
+        if x >= floorData.minX and x <= floorData.maxX and
+            y >= floorData.minY and y <= floorData.maxY and
+            z >= floorData.minZ and z <= floorData.maxZ then
+            return floorId
+        end
+    end
+
+    return nil -- Position not in any defined floor boundary
+end
+
 function map.get_floor_id(x, y, z)
+    local zoneId = map.get_player_zone()
+
+    -- First try custom map boundaries if enabled and zone has custom data
+    if boussole and boussole.config and boussole.config.useCustomMaps[1] and zoneId then
+        local customFloorId = map.get_custom_floor_id(zoneId, x, y, z)
+        if customFloorId ~= nil then
+            return customFloorId
+        end
+    end
+
+    -- Fall back to game's floor detection
     if not map.floor_func or not map.floor_this_ptr then
         local ok, err = map.init_floor_function()
         if not ok then return nil, err end
@@ -220,6 +251,32 @@ function map.get_current_map()
     local x, y, z = map.get_player_position()
     if not x then return nil, 'no position' end
 
+    -- Check if we should use custom map boundaries
+    if boussole.config.useCustomMaps[1] then
+        local customFloorId = map.get_custom_floor_id(zoneId, x, y, z)
+        if customFloorId ~= nil then
+            local customData = map.get_custom_map_data(zoneId, customFloorId)
+            if customData then
+                -- Create a fake entry for the custom map
+                local entry = {
+                    ZoneId = zoneId,
+                    FloorId = customFloorId,
+                    FloorIndex = 0,
+                    Flags = 0,
+                    Scale = 1,
+                    KeyItemOffset = 0,
+                    Unknown0000 = 0,
+                    MapDatOffset = 0,
+                    OffsetX = 0,
+                    OffsetY = 0,
+                    _isCustomMap = true,
+                    _customData = customData
+                }
+                return entry, nil
+            end
+        end
+    end
+
     -- Get floor ID from game function
     local floorId, err = map.get_floor_id(x, y, z)
     if not floorId then
@@ -318,6 +375,19 @@ function map.load_current_map_dat()
         return nil, err
     end
 
+    -- Check if this floor was determined by custom boundaries
+    if entry._isCustomMap and entry._customData then
+        -- For custom maps, we don't need a DAT file
+        map.current_map_data = {
+            entry = entry,
+            datIndex = 0,
+            keyItemIndex = 0,
+            datPath = nil,
+            isCustom = true
+        }
+        return map.current_map_data, nil
+    end
+
     local datPath, err = map.get_dat_file_path(entry)
     if not datPath then
         return nil, err
@@ -349,6 +419,16 @@ end
 
 -- Convert 3D world coords to 2D map pixel coords
 function map.world_to_map_coords(entry, worldX, worldY, worldZ)
+    -- Check if this is a custom map and we have custom map data
+    if entry._isCustomMap and entry._customData then
+        -- Use custom map's direct coordinate scaling
+        local customData = entry._customData
+        local mapX = (worldX * customData.scalingX + customData.offsetX)
+        local mapY = (worldY * customData.scalingY + customData.offsetY)
+        return mapX, mapY
+    end
+
+    -- Standard DAT-based coordinate conversion
     local divisor = map.get_divisor(entry)
     if divisor == 0 then
         return nil, nil
@@ -371,10 +451,19 @@ end
 
 -- Convert map pixel coords to grid position
 function map.map_to_grid_coords(entry, mapX, mapY)
-    -- (mapX - OffsetX - 16) / 32 + 'A'
-    -- (mapY - OffsetY - 16) / 32 + 1
-    local gridX = math.floor((mapX - entry.OffsetX - 16) / 32)
-    local gridY = math.floor((mapY - entry.OffsetY - 16) / 32) + 1
+    -- For custom maps, scale grid calculation based on referenceSize
+    local gridDivisor = 32
+    local gridOffset = 16
+    if entry._isCustomMap and entry._customData.referenceSize then
+        -- Scale divisor: 512/32 = 16 cells, so for referenceSize we use referenceSize/16
+        gridDivisor = entry._referenceSize / 16
+        gridOffset = gridDivisor / 2
+    end
+
+    -- (mapX - OffsetX - offset) / divisor + 'A'
+    -- (mapY - OffsetY - offset) / divisor + 1
+    local gridX = math.floor((mapX - entry.OffsetX - gridOffset) / gridDivisor)
+    local gridY = math.floor((mapY - entry.OffsetY - gridOffset) / gridDivisor) + 1
 
     -- Clamp gridX to valid range (0-25 for A-Z)
     gridX = math.max(0, math.min(25, gridX))
@@ -470,6 +559,19 @@ end
 
 function map.has_redirect(sourceZone, sourceFloor)
     return map.get_redirect(sourceZone, sourceFloor) ~= nil
+end
+
+-- Check if zone has custom map data
+function map.has_custom_map_data(zoneId)
+    return customMaps[zoneId] ~= nil
+end
+
+-- Get custom map data for zone and floor
+function map.get_custom_map_data(zoneId, floorId)
+    if not customMaps[zoneId] then
+        return nil
+    end
+    return customMaps[zoneId][floorId]
 end
 
 return map

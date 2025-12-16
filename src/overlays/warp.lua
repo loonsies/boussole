@@ -44,8 +44,14 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
 
                 if mapX then
                     -- Convert map coordinates to texture pixel coordinates
-                    local texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-                    local texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                    local texX, texY
+                    if mapData.entry._isCustomMap then
+                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+                    else
+                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                    end
 
                     -- Convert to screen coordinates
                     local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
@@ -111,8 +117,14 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
 
                 if mapX then
                     -- Convert map coordinates to texture pixel coordinates
-                    local texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-                    local texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                    local texX, texY
+                    if mapData.entry._isCustomMap then
+                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+                    else
+                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                    end
 
                     -- Convert to screen coordinates
                     local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom

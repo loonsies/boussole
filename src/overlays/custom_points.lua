@@ -336,8 +336,13 @@ function custom_points.draw(mapData, windowPosX, windowPosY, contentMinX, conten
 
     for pointId, point in pairs(points) do
         -- Convert map coordinates to texture pixel coordinates
-        local texX = (point.mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-        local texY = (point.mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+        if mapData.entry._isCustomMap then
+            texX = (point.mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+            texY = (point.mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+        else
+            texX = (point.mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+            texY = (point.mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+        end
 
         -- Convert to screen coordinates
         local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
