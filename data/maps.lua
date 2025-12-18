@@ -378,6 +378,113 @@ local maps = {
             referenceSize = 256,
         },
     },
+
+    [38] = {    -- Apollyon
+        [0] = { -- Entrance SE
+            scalingX = 0.25,
+            offsetX = 3,
+            scalingY = -0.25,
+            offsetY = 3,
+            minX = 550,
+            minY = -700,
+            minZ = -10000,
+            maxX = 700,
+            maxY = -560,
+            maxZ = 10000,
+            referenceSize = 256
+        },
+        [1] = { -- Entrance SW
+            scalingX = 0.25,
+            offsetX = 254,
+            scalingY = -0.25,
+            offsetY = 1,
+            minX = -700,
+            minY = -700,
+            minZ = -10000,
+            maxX = -550,
+            maxY = -560,
+            maxZ = 10000,
+            referenceSize = 256
+        },
+        [2] = { -- NE
+            scalingX = 0.25,
+            offsetX = 21,
+            scalingY = -0.25,
+            offsetY = 205,
+            minX = 150,
+            minY = -120,
+            minZ = -10000,
+            maxX = 700,
+            maxY = 700,
+            maxZ = 10000,
+            referenceSize = 256
+        },
+        [3] = { -- NW
+            scalingX = 0.25,
+            offsetX = 242,
+            scalingY = -0.25,
+            offsetY = 198,
+            minX = -700,
+            minY = -120,
+            minZ = -10000,
+            maxX = -150,
+            maxY = 700,
+            maxZ = 10000,
+            referenceSize = 256
+        },
+        [4] = { -- SE
+            scalingX = 0.25,
+            offsetX = 35,
+            scalingY = -0.25,
+            offsetY = 21,
+            minX = 50,
+            minY = -560,
+            minZ = -10000,
+            maxX = 700,
+            maxY = -230,
+            maxZ = 10000,
+            referenceSize = 256
+        },
+        [5] = { -- SW
+            scalingX = 0.25,
+            offsetX = 220,
+            scalingY = -0.25,
+            offsetY = 22,
+            minX = -700,
+            minY = -560,
+            minZ = -10000,
+            maxX = -50,
+            maxY = -230,
+            maxZ = 10000,
+            referenceSize = 256
+        },
+        [6] = { -- Central N
+            scalingX = 0.25,
+            offsetX = 134,
+            scalingY = -0.25,
+            offsetY = 167,
+            minX = -150,
+            minY = 0,
+            minZ = -10000,
+            maxX = 150,
+            maxY = 700,
+            maxZ = 10000,
+            referenceSize = 256
+        },
+        [7] = { -- Central S
+            scalingX = 0.25,
+            offsetX = 133,
+            scalingY = -0.25,
+            offsetY = 92,
+            minX = -150,
+            minY = -230,
+            minZ = -10000,
+            maxX = 150,
+            maxY = 0,
+            maxZ = 10000,
+            referenceSize = 256
+        },
+    },
 }
 
 return maps
