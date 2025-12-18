@@ -12,6 +12,7 @@ local maps = {
             maxY          = 550,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'North 1F'
         },
 
         [1] = { -- North 2F
@@ -26,6 +27,7 @@ local maps = {
             maxY          = 550,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'North 2F'
         },
 
         [2] = { -- North 3F
@@ -40,6 +42,7 @@ local maps = {
             maxY          = 550,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'North 3F'
         },
 
         [3] = { -- North 4F
@@ -54,6 +57,7 @@ local maps = {
             maxY          = 550,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'North 4F'
         },
 
         [4] = { -- North 5F
@@ -68,6 +72,7 @@ local maps = {
             maxY          = 550,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'North 5F'
         },
 
         [5] = { -- North 6F
@@ -82,6 +87,7 @@ local maps = {
             maxY          = 550,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'North 6F'
         },
 
         [6] = { -- North 7F
@@ -96,6 +102,7 @@ local maps = {
             maxY          = 550,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'North 7F'
         },
 
         [7] = { -- East 1F
@@ -110,6 +117,7 @@ local maps = {
             maxY          = -50,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'East 1F'
         },
 
         [8] = { -- East 2F
@@ -124,6 +132,7 @@ local maps = {
             maxY          = -50,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'East 2F'
         },
 
         [9] = { -- East 3F
@@ -138,6 +147,7 @@ local maps = {
             maxY          = -50,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'East 3F'
         },
 
         [10] = { -- East 4F
@@ -152,6 +162,7 @@ local maps = {
             maxY          = -50,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'East 4F'
         },
 
         [11] = { -- East 5F
@@ -166,6 +177,7 @@ local maps = {
             maxY          = -50,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'East 5F'
         },
 
         [12] = { -- East 6F
@@ -180,6 +192,7 @@ local maps = {
             maxY          = -50,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'East 6F'
         },
 
         [13] = { -- East 7F
@@ -194,6 +207,7 @@ local maps = {
             maxY          = -50,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'East 7F'
         },
 
         [14] = { -- West 1F
@@ -208,6 +222,7 @@ local maps = {
             maxY          = 250,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'West 1F'
         },
 
         [15] = { -- West 2F
@@ -222,6 +237,7 @@ local maps = {
             maxY          = 250,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'West 2F'
         },
 
         [16] = { -- West 3F
@@ -236,6 +252,7 @@ local maps = {
             maxY          = 250,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'West 3F'
         },
 
         [17] = { -- West 4F
@@ -250,6 +267,7 @@ local maps = {
             maxY          = 250,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'West 4F'
         },
 
         [18] = { -- West 5F
@@ -264,6 +282,7 @@ local maps = {
             maxY          = 250,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'West 5F'
         },
 
         [19] = { -- West 6F
@@ -278,6 +297,7 @@ local maps = {
             maxY          = 250,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'West 6F'
         },
 
         [20] = { -- West 7F
@@ -292,6 +312,7 @@ local maps = {
             maxY          = 250,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'West 7F'
         },
 
         [21] = { -- Central 1F
@@ -306,6 +327,7 @@ local maps = {
             maxY          = -290,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'Central 1F'
         },
 
         [22] = { -- Central 2F
@@ -320,6 +342,7 @@ local maps = {
             maxY          = -290,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'Central 2F'
         },
 
         [23] = { -- Central 3F
@@ -334,6 +357,7 @@ local maps = {
             maxY          = -290,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'Central 3F'
         },
 
         [24] = { -- Central 4F
@@ -348,6 +372,7 @@ local maps = {
             maxY          = -290,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'Central 4F'
         },
 
         [25] = { -- Central B1F
@@ -362,6 +387,7 @@ local maps = {
             maxY          = -290,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'Central B1F'
         },
 
         [26] = { -- Entrance
@@ -376,113 +402,122 @@ local maps = {
             maxY          = 160,
             maxZ          = 1000,
             referenceSize = 256,
+            subZoneName   = 'Entrance'
         },
     },
 
     [38] = {    -- Apollyon
-        [0] = { -- Entrance SE
-            scalingX = 0.25,
-            offsetX = 3,
-            scalingY = -0.25,
-            offsetY = 3,
-            minX = 550,
-            minY = -700,
-            minZ = -10000,
-            maxX = 700,
-            maxY = -560,
-            maxZ = 10000,
-            referenceSize = 256
+        [0] = { -- South East Entrance
+            scalingX      = 0.25,
+            offsetX       = 3,
+            scalingY      = -0.25,
+            offsetY       = 3,
+            minX          = 550,
+            minY          = -700,
+            minZ          = -10000,
+            maxX          = 700,
+            maxY          = -560,
+            maxZ          = 10000,
+            referenceSize = 256,
+            subZoneName   = 'South East Entrance'
         },
-        [1] = { -- Entrance SW
-            scalingX = 0.25,
-            offsetX = 254,
-            scalingY = -0.25,
-            offsetY = 1,
-            minX = -700,
-            minY = -700,
-            minZ = -10000,
-            maxX = -550,
-            maxY = -560,
-            maxZ = 10000,
-            referenceSize = 256
+        [1] = { -- South West Entrance
+            scalingX      = 0.25,
+            offsetX       = 254,
+            scalingY      = -0.25,
+            offsetY       = 1,
+            minX          = -700,
+            minY          = -700,
+            minZ          = -10000,
+            maxX          = -550,
+            maxY          = -560,
+            maxZ          = 10000,
+            referenceSize = 256,
+            subZoneName   = 'South West Entrance'
         },
-        [2] = { -- NE
-            scalingX = 0.25,
-            offsetX = 21,
-            scalingY = -0.25,
-            offsetY = 205,
-            minX = 150,
-            minY = -120,
-            minZ = -10000,
-            maxX = 700,
-            maxY = 700,
-            maxZ = 10000,
-            referenceSize = 256
+        [2] = { -- North East
+            scalingX      = 0.25,
+            offsetX       = 21,
+            scalingY      = -0.25,
+            offsetY       = 205,
+            minX          = 150,
+            minY          = -120,
+            minZ          = -10000,
+            maxX          = 700,
+            maxY          = 700,
+            maxZ          = 10000,
+            referenceSize = 256,
+            subZoneName   = 'North East'
         },
-        [3] = { -- NW
-            scalingX = 0.25,
-            offsetX = 242,
-            scalingY = -0.25,
-            offsetY = 198,
-            minX = -700,
-            minY = -120,
-            minZ = -10000,
-            maxX = -150,
-            maxY = 700,
-            maxZ = 10000,
-            referenceSize = 256
+        [3] = { -- North West
+            scalingX      = 0.25,
+            offsetX       = 242,
+            scalingY      = -0.25,
+            offsetY       = 198,
+            minX          = -700,
+            minY          = -120,
+            minZ          = -10000,
+            maxX          = -150,
+            maxY          = 700,
+            maxZ          = 10000,
+            referenceSize = 256,
+            subZoneName   = 'North West'
         },
-        [4] = { -- SE
-            scalingX = 0.25,
-            offsetX = 35,
-            scalingY = -0.25,
-            offsetY = 21,
-            minX = 50,
-            minY = -560,
-            minZ = -10000,
-            maxX = 700,
-            maxY = -230,
-            maxZ = 10000,
-            referenceSize = 256
+        [4] = { -- South East
+            scalingX      = 0.25,
+            offsetX       = 35,
+            scalingY      = -0.25,
+            offsetY       = 21,
+            minX          = 50,
+            minY          = -560,
+            minZ          = -10000,
+            maxX          = 700,
+            maxY          = -230,
+            maxZ          = 10000,
+            referenceSize = 256,
+            subZoneName   = 'South East'
         },
-        [5] = { -- SW
-            scalingX = 0.25,
-            offsetX = 220,
-            scalingY = -0.25,
-            offsetY = 22,
-            minX = -700,
-            minY = -560,
-            minZ = -10000,
-            maxX = -50,
-            maxY = -230,
-            maxZ = 10000,
-            referenceSize = 256
+        [5] = { -- South West
+            scalingX      = 0.25,
+            offsetX       = 220,
+            scalingY      = -0.25,
+            offsetY       = 22,
+            minX          = -700,
+            minY          = -560,
+            minZ          = -10000,
+            maxX          = -50,
+            maxY          = -230,
+            maxZ          = 10000,
+            referenceSize = 256,
+            subZoneName   = 'South West'
         },
-        [6] = { -- Central N
-            scalingX = 0.25,
-            offsetX = 134,
-            scalingY = -0.25,
-            offsetY = 167,
-            minX = -150,
-            minY = 0,
-            minZ = -10000,
-            maxX = 150,
-            maxY = 700,
-            maxZ = 10000,
-            referenceSize = 256
+        [6] = { -- Central North
+            scalingX      = 0.25,
+            offsetX       = 134,
+            scalingY      = -0.25,
+            offsetY       = 167,
+            minX          = -150,
+            minY          = 0,
+            minZ          = -10000,
+            maxX          = 150,
+            maxY          = 700,
+            maxZ          = 10000,
+            referenceSize = 256,
+            subZoneName   = 'Central North'
         },
-        [7] = { -- Central S
-            scalingX = 0.25,
-            offsetX = 133,
-            scalingY = -0.25,
-            offsetY = 92,
-            minX = -150,
-            minY = -230,
-            minZ = -10000,
-            maxX = 150,
-            maxY = 0,
-            maxZ = 10000,
-            referenceSize = 256
+        [7] = { -- Central South
+            scalingX      = 0.25,
+            offsetX       = 133,
+            scalingY      = -0.25,
+            offsetY       = 92,
+            minX          = -150,
+            minY          = -230,
+            minZ          = -10000,
+            maxX          = 150,
+            maxY          = 0,
+            maxZ          = 10000,
+            referenceSize = 256,
+            subZoneName   = 'Central South'
         },
     },
 }

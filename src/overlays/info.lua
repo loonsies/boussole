@@ -32,7 +32,12 @@ function info_overlay.draw(windowPosX, windowPosY, contentMinX, contentMinY, map
 
         if regionName and zoneName then
             location = string.format('%s - %s', regionName, zoneName)
-            if floorId > 0 then
+
+            -- Check if we have a custom map with subZoneName
+            if mapData and mapData.entry and mapData.entry._isCustomMap and
+                mapData.entry._customData and mapData.entry._customData.subZoneName then
+                location = location .. string.format(' (%s)', mapData.entry._customData.subZoneName)
+            elseif floorId > 0 then
                 location = location .. string.format(' (Floor %d)', floorId)
             end
         end
