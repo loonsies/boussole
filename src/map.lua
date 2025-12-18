@@ -456,7 +456,7 @@ function map.map_to_grid_coords(entry, mapX, mapY)
     local gridOffset = 16
     if entry._isCustomMap and entry._customData.referenceSize then
         -- Scale divisor: 512/32 = 16 cells, so for referenceSize we use referenceSize/16
-        gridDivisor = entry._referenceSize / 16
+        gridDivisor = entry._customData.referenceSize / 16
         gridOffset = gridDivisor / 2
     end
 
