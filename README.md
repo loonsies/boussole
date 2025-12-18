@@ -33,7 +33,7 @@
 - Custom maps uses the ZONEID_FLOORID format, .png, .jpg and .bmp formats are supported
 - If you're not sure about ZONEID or FLOORID, simply browse maps in the panel and export the map as .BMP, the file will be named correctly for being used as a custom map
 
-### A collection of redirections and custom maps is available at https://github.com/loonsies/boussole_redirections
+### A collection of redirections and custom maps is available at https://github.com/loonsies/boussole_custom_maps
 
 # Commands
 - `/boussole` Toggles the UI
@@ -52,3 +52,4 @@
 
 # Credits and thanks
 atom0s & Thorny for providing code and help
+
