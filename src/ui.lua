@@ -122,7 +122,12 @@ function ui.center_on_player(mapData, availWidth, availHeight, textureWidth, tex
     end
 
     -- Convert map coordinates to texture coordinates
-    local scale = textureWidth / 512.0
+    local scale
+    if mapData.entry._isCustomMap and mapData.entry._customData and mapData.entry._customData.referenceSize then
+        scale = textureWidth / mapData.entry._customData.referenceSize
+    else
+        scale = textureWidth / 512.0
+    end
     local texX = (mapX - mapData.entry.OffsetX) * scale
     local texY = (mapY - mapData.entry.OffsetY) * scale
 
@@ -299,8 +304,13 @@ function ui.drawUI()
                         -- Check if click is within texture bounds
                         if texMouseX >= 0 and texMouseX <= ui.map_texture.width and
                             texMouseY >= 0 and texMouseY <= ui.map_texture.height then
-                            -- Scale texture coordinates to 512x512 map coordinate space
-                            local scale = 512.0 / ui.map_texture.width
+                            -- Scale texture coordinates to map coordinate space
+                            local scale
+                            if map.current_map_data.entry._isCustomMap and map.current_map_data.entry._customData and map.current_map_data.entry._customData.referenceSize then
+                                scale = map.current_map_data.entry._customData.referenceSize / ui.map_texture.width
+                            else
+                                scale = 512.0 / ui.map_texture.width
+                            end
                             local mapX = texMouseX * scale + map.current_map_data.entry.OffsetX
                             local mapY = texMouseY * scale + map.current_map_data.entry.OffsetY
 
@@ -436,8 +446,13 @@ function ui.drawUI()
                     -- Check if mouse is actually over the texture (not just the window)
                     if texMouseX >= 0 and texMouseX <= ui.map_texture.width and
                         texMouseY >= 0 and texMouseY <= ui.map_texture.height then
-                        -- Scale texture coordinates to 512x512 map coordinate space
-                        local scale = 512.0 / ui.map_texture.width
+                        -- Scale texture coordinates to map coordinate space
+                        local scale
+                        if map.current_map_data.entry._isCustomMap and map.current_map_data.entry._customData and map.current_map_data.entry._customData.referenceSize then
+                            scale = map.current_map_data.entry._customData.referenceSize / ui.map_texture.width
+                        else
+                            scale = 512.0 / ui.map_texture.width
+                        end
                         local mapX = texMouseX * scale + map.current_map_data.entry.OffsetX
                         local mapY = texMouseY * scale + map.current_map_data.entry.OffsetY
 
