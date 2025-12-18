@@ -420,7 +420,7 @@ function ui.drawUI()
                     ui.map_offset.x, ui.map_offset.y,
                     ui.map_zoom, ui.map_texture.width)
 
-                player_overlay.draw(map.current_map_data, windowPosX, windowPosY,
+                alliance_overlay.draw(boussole.config, map.current_map_data, windowPosX, windowPosY,
                     contentMinX, contentMinY,
                     ui.map_offset.x, ui.map_offset.y,
                     ui.map_zoom, ui.map_texture.width)
@@ -430,7 +430,7 @@ function ui.drawUI()
                     ui.map_offset.x, ui.map_offset.y,
                     ui.map_zoom, ui.map_texture.width)
 
-                alliance_overlay.draw(boussole.config, map.current_map_data, windowPosX, windowPosY,
+                player_overlay.draw(map.current_map_data, windowPosX, windowPosY,
                     contentMinX, contentMinY,
                     ui.map_offset.x, ui.map_offset.y,
                     ui.map_zoom, ui.map_texture.width)
