@@ -46,4 +46,12 @@ function utils.rgb_to_abgr(rgbaTable)
     )
 end
 
+function utils.round2(x)
+    if x >= 0 then
+        return math.floor(x * 100 + 0.5) / 100
+    else
+        return math.ceil(x * 100 - 0.5) / 100
+    end
+end
+
 return utils

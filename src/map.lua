@@ -2,6 +2,7 @@ local map = {}
 
 local mem = ashita.memory
 local ffi = require('ffi')
+local utils = require('src.utils')
 local zonesFloors = require('data.zonesFloors')
 local customMaps = require('data.maps')
 
@@ -434,17 +435,19 @@ function map.world_to_map_coords(entry, worldX, worldY, worldZ)
         return nil, nil
     end
 
-    -- Map coordinates = world * (1/divisor) * 512, rounded
+    -- Map coordinates = world * (1/divisor) * 512
     local v5 = 1.0 / divisor
-    local mapX = math.floor(worldX * v5 * 512.0 + 0.5)
-    local mapY_unsigned = math.floor(worldY * v5 * 512.0 + 0.5)
-    local mapY = -mapY_unsigned -- Y is negated in map space
 
-    -- Convert to signed 16-bit
-    mapX = bit.band(mapX, 0xFFFF)
-    if mapX >= 0x8000 then mapX = mapX - 0x10000 end
-    mapY = bit.band(mapY, 0xFFFF)
-    if mapY >= 0x8000 then mapY = mapY - 0x10000 end
+    local mapX = worldX * v5 * 512.0
+    local mapY = -(worldY * v5 * 512.0) -- Y is negated in map space
+
+    -- Clamp to signed 16-bit range while keeping floating-point precision
+    mapX = math.max(-32768, math.min(32767, mapX))
+    mapY = math.max(-32768, math.min(32767, mapY))
+
+    -- Round to 2 decimals
+    mapX = utils.round2(mapX)
+    mapY = utils.round2(mapY)
 
     return mapX, mapY
 end
