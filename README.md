@@ -20,6 +20,21 @@
 - Custom PNG icons per point (optional tint)
 - Custom maps
 - XiPivot support
+- Map UI controls:
+  - Always center on player
+  - Center once
+  - Show nametags above entities
+  - Reset map zoom
+- Tracked entities display (ported from scenthound):
+  - Displays tracked entities as dots on the map
+  - Save tracked entities into profiles
+  - **Use with extreme caution**
+  - This feature is effectively cheating and may be dangerous for your account, disabled by default
+- Custom maps data handling:
+  - Supports maps for areas such as Temenos / Apollyon 119
+  - Includes offsets and calibration data out of the box
+  - Compatible with custom maps from https://github.com/loonsies/boussole_custom_maps
+  - If using different maps, offsets must be calibrated manually
 
 # Quick use
 - You can open the right panel to filter what overlays are displayed, browse maps, redirect maps, customize UI, export maps to .BMP, and more
@@ -52,4 +67,3 @@
 
 # Credits and thanks
 atom0s & Thorny for providing code and help
-
