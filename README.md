@@ -9,7 +9,7 @@
 </h3>
 
 <p align="center">
-  <img src="https://i.imgur.com/oP3Kilw.png" alt="Image 1" width="600px" style="max-width: 100%;"/>
+  <img width="875" height="899" alt="image" src="https://github.com/user-attachments/assets/03b574a8-0908-488a-9683-1395964dce5f" style="max-width: 100%;" />
 </p>
 
 # Features
@@ -67,3 +67,4 @@
 
 # Credits and thanks
 atom0s & Thorny for providing code and help
+
