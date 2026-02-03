@@ -191,6 +191,11 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                     tracker.load_zone_entities(newZone, newSubZone)
                     boussole.trackerSearchResults = {}
                     boussole.trackerSearch = { '' }
+
+                    -- Reload the last selected profile if one was loaded
+                    if boussole.config.lastLoadedTrackerProfile and boussole.config.lastLoadedTrackerProfile ~= '' then
+                        tracker.load_profile(boussole.config.lastLoadedTrackerProfile)
+                    end
                 end
             else
                 map.clear_map_cache()

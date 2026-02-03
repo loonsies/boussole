@@ -525,14 +525,16 @@ local function draw_map_tab(currentZone, currentFloor, selectedZoneName, filtere
 
     if selZoneId == currentZone then
         table.insert(floorIds, currentFloor)
-        table.insert(floorNames, string.format('%d (Current)', currentFloor))
+        local floorName = map.get_floor_name(selZoneId, currentFloor)
+        table.insert(floorNames, string.format('%s (Current)', floorName))
     end
 
     local zonesFloors = map.get_floors_for_zone(selZoneId)
     for _, fid in ipairs(zonesFloors) do
         if fid ~= currentFloor or selZoneId ~= currentZone then
             table.insert(floorIds, fid)
-            table.insert(floorNames, tostring(fid))
+            local floorName = map.get_floor_name(selZoneId, fid)
+            table.insert(floorNames, floorName)
         end
     end
 

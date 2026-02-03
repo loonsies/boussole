@@ -499,9 +499,25 @@ function ui.update()
 
     if boussole.manualMapReload[1] then
         if boussole.manualZoneId[1] and boussole.manualFloorId[1] then
-            local entry = map.find_entry_by_floor(boussole.manualZoneId[1], boussole.manualFloorId[1])
+            local entry = map.get_map_for_floor(boussole.manualZoneId[1], boussole.manualFloorId[1])
             if entry then
-                map.current_map_data = { entry = entry }
+                -- Check if this is a custom map
+                if entry._isCustomMap and entry._customData then
+                    map.current_map_data = {
+                        entry = entry,
+                        datIndex = 0,
+                        keyItemIndex = 0,
+                        datPath = nil,
+                        isCustom = true
+                    }
+                else
+                    map.current_map_data = {
+                        entry = entry,
+                        datIndex = map.get_dat_index(entry),
+                        keyItemIndex = map.get_key_item_index(entry),
+                        datPath = map.get_dat_file_path(entry)
+                    }
+                end
                 texture.load_and_set(ui, map.current_map_data, chat, addon.name)
             end
         end

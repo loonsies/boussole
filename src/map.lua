@@ -226,6 +226,35 @@ function map.find_entry_by_floor(zoneid, floorid)
     return entry
 end
 
+-- Get map entry for any zone/floor, checking custom maps first if enabled
+function map.get_map_for_floor(zoneid, floorid)
+    -- Check if custom maps are enabled and this zone/floor has custom data
+    if boussole and boussole.config and boussole.config.useCustomMaps[1] then
+        local customData = map.get_custom_map_data(zoneid, floorid)
+        if customData then
+            -- Create entry for custom map
+            local entry = {
+                ZoneId = zoneid,
+                FloorId = floorid,
+                FloorIndex = 0,
+                Flags = 0,
+                Scale = 1,
+                KeyItemOffset = 0,
+                Unknown0000 = 0,
+                MapDatOffset = 0,
+                OffsetX = 0,
+                OffsetY = 0,
+                _isCustomMap = true,
+                _customData = customData
+            }
+            return entry
+        end
+    end
+
+    -- Fall back to regular DAT-based map
+    return map.find_entry_by_floor(zoneid, floorid)
+end
+
 -- Get current player zone ID
 function map.get_player_zone()
     local party = AshitaCore:GetMemoryManager():GetParty()
@@ -499,18 +528,34 @@ function map.get_player_grid_position()
 end
 
 function map.get_floors_for_zone(zoneid)
-    local zone_data = zonesFloors[zoneid]
-    if not zone_data then
-        return {}
-    end
-
-    -- Extract floor IDs from the table keys
     local floors = {}
-    for floorid, _ in pairs(zone_data) do
-        table.insert(floors, floorid)
-    end
-    table.sort(floors)
+    local floorSet = {} -- Track unique floor IDs
 
+    -- Get regular map floors
+    local zone_data = zonesFloors[zoneid]
+    if zone_data then
+        for floorid, _ in pairs(zone_data) do
+            if not floorSet[floorid] then
+                table.insert(floors, floorid)
+                floorSet[floorid] = true
+            end
+        end
+    end
+
+    -- Add custom map floors if enabled
+    if boussole and boussole.config and boussole.config.useCustomMaps[1] then
+        local customData = customMaps[zoneid]
+        if customData then
+            for floorid, _ in pairs(customData) do
+                if not floorSet[floorid] then
+                    table.insert(floors, floorid)
+                    floorSet[floorid] = true
+                end
+            end
+        end
+    end
+
+    table.sort(floors)
     return floors
 end
 
@@ -522,6 +567,19 @@ function map.get_first_floor_for_zone(zoneid)
     end
 
     return 0
+end
+
+function map.get_floor_name(zoneid, floorid)
+    -- Check if custom maps are enabled and this zone/floor has a custom name
+    if boussole and boussole.config and boussole.config.useCustomMaps[1] then
+        local customData = customMaps[zoneid]
+        if customData and customData[floorid] and customData[floorid].subZoneName then
+            return customData[floorid].subZoneName
+        end
+    end
+
+    -- Fall back to just the floor ID
+    return tostring(floorid)
 end
 
 function map.add_redirect(sourceZone, sourceFloor, targetZone, targetFloor, offsetX, offsetY)
