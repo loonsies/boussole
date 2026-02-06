@@ -39,7 +39,7 @@ local function get_camera_cursor_texture_id()
         return nil
     end
 
-    local imagePath = string.format('%saddons\\boussole\\assets\\cursor.png', AshitaCore:GetInstallPath())
+    local imagePath = string.format('%saddons\\boussole\\assets\\camera.png', AshitaCore:GetInstallPath())
     local texture_ptr = ffi.new('IDirect3DTexture8*[1]')
     local hr = C.D3DXCreateTextureFromFileA(d3d8dev, imagePath, texture_ptr)
     if hr ~= C.S_OK then
@@ -1089,11 +1089,11 @@ function map_data_editor.draw_bounds(mapData, windowPosX, windowPosY, contentMin
 
             local cursorId = get_camera_cursor_texture_id()
             if cursorId then
-                local size = math.max(10, 16 * mapZoom)
-                local half = size / 2
+                local cursorSize = boussole.config.iconSizePlayer[1] or 20.0
+                local halfSize = cursorSize / 2
                 drawList:AddImage(cursorId,
-                    { screenX - half, screenY - half },
-                    { screenX + half, screenY + half },
+                    { screenX - halfSize, screenY - halfSize },
+                    { screenX + halfSize, screenY + halfSize },
                     { 0, 0 }, { 1, 1 },
                     0xFFFFFFFF)
             else
