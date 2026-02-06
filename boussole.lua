@@ -16,6 +16,7 @@ local texture = require('src.texture')
 local warp_points = require('src.warp_points')
 local tracker = require('src.tracker')
 local map_data_editor = require('src.map_data_editor')
+local custom_points = require('src.overlays.custom_points')
 
 boussole = {
     config = {},
@@ -67,6 +68,10 @@ ashita.events.register('load', 'load_cb', function ()
     map.find_map_table()
     map.init_floor_function()
     boussole.config = config.load()
+
+    -- Load per-character custom points, then migrate settings-based data into JSON
+    custom_points.load_custom_points()
+    custom_points.migrate_from_config(boussole.config)
 
     -- Initialize warp point data
     warp_points.init()

@@ -4,6 +4,7 @@ local imgui = require('imgui')
 local utils = require('src.utils')
 local settings = require('settings')
 local tooltip = require('src.overlays.tooltip')
+local json = require('json')
 local ffi = require('ffi')
 local d3d8 = require('d3d8')
 
@@ -21,6 +22,79 @@ custom_points.ICON_SHAPES = {
 
 -- Texture cache for custom images
 custom_points.texture_cache = {}
+custom_points.data = {}
+
+function custom_points.get_settings_path()
+    if settings and type(settings.settings_path) == 'function' then
+        return settings.settings_path()
+    end
+    return string.format('%s/config/addons/%s/defaults/', AshitaCore:GetInstallPath(), addon.name)
+end
+
+function custom_points.get_custom_points_path()
+    local settingsPath = custom_points.get_settings_path()
+    return settingsPath .. 'custom_points.json'
+end
+
+function custom_points.save_custom_points()
+    local settingsPath = custom_points.get_settings_path()
+    local filePath = custom_points.get_custom_points_path()
+
+    ashita.fs.create_dir(settingsPath)
+
+    local file = io.open(filePath, 'w')
+    if file then
+        file:write(json.encode({ points = custom_points.data }))
+        file:close()
+    end
+end
+
+function custom_points.load_custom_points()
+    local filePath = custom_points.get_custom_points_path()
+    local file = io.open(filePath, 'r')
+    if not file then
+        custom_points.data = {}
+        return
+    end
+
+    local content = file:read('*all')
+    file:close()
+
+    local success, data = pcall(json.decode, content)
+    if success and data and type(data.points) == 'table' then
+        custom_points.data = data.points
+    else
+        custom_points.data = {}
+    end
+end
+
+function custom_points.migrate_from_config(config)
+    if not config or type(config.customPoints) ~= 'table' then
+        return
+    end
+
+    local hadPoints = false
+    custom_points.data = custom_points.data or {}
+    for mapKey, points in pairs(config.customPoints) do
+        if type(points) == 'table' then
+            if not custom_points.data[mapKey] then
+                custom_points.data[mapKey] = {}
+            end
+            for pointId, point in pairs(points) do
+                hadPoints = true
+                if custom_points.data[mapKey][pointId] == nil then
+                    custom_points.data[mapKey][pointId] = point
+                end
+            end
+        end
+    end
+
+    if hadPoints then
+        custom_points.save_custom_points()
+    end
+    config.customPoints = nil
+    settings.save()
+end
 
 -- Get custom icons folder path
 function custom_points.get_custom_icons_folder()
@@ -80,6 +154,7 @@ custom_points.popup_state = {
     mapY = 0,
     pointId = nil,
     name = { '' },
+    note = { '' },
     iconShape = { 1 },
     color = { 1.0, 1.0, 1.0, 1.0 },
     size = { 8 },
@@ -102,7 +177,7 @@ end
 -- Find point at given screen coordinates
 function custom_points.find_point_at_position(zoneId, floorId, screenX, screenY, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
     local mapKey = custom_points.get_map_key(zoneId, floorId)
-    local points = boussole.config.customPoints[mapKey]
+    local points = custom_points.data[mapKey]
 
     if not points then return nil end
 
@@ -139,6 +214,7 @@ function custom_points.open_add_popup(zoneId, floorId, mapX, mapY)
     custom_points.popup_state.mapY = mapY
     custom_points.popup_state.pointId = nil
     custom_points.popup_state.name = { '' }
+    custom_points.popup_state.note = { '' }
     custom_points.popup_state.iconShape = { 1 }
     custom_points.popup_state.color = { 1.0, 1.0, 1.0, 1.0 }
     custom_points.popup_state.size = { 8 }
@@ -156,6 +232,7 @@ function custom_points.open_edit_popup(zoneId, floorId, pointId, point)
     custom_points.popup_state.mapY = point.mapY
     custom_points.popup_state.pointId = pointId
     custom_points.popup_state.name = { point.name or '' }
+    custom_points.popup_state.note = { point.note or '' }
     custom_points.popup_state.iconShape = { point.iconShape or 1 }
     custom_points.popup_state.color = { point.color[1], point.color[2], point.color[3], point.color[4] }
     custom_points.popup_state.size = { point.size or 8 }
@@ -167,8 +244,8 @@ end
 function custom_points.save_point()
     local mapKey = custom_points.get_map_key(custom_points.popup_state.zoneId, custom_points.popup_state.floorId)
 
-    if not boussole.config.customPoints[mapKey] then
-        boussole.config.customPoints[mapKey] = {}
+    if not custom_points.data[mapKey] then
+        custom_points.data[mapKey] = {}
     end
 
     local pointId = custom_points.popup_state.pointId
@@ -183,7 +260,7 @@ function custom_points.save_point()
 
     -- If editing and icon shape or imageName changed, clear the texture cache
     if custom_points.popup_state.editing then
-        local existingPoint = boussole.config.customPoints[mapKey][pointId]
+        local existingPoint = custom_points.data[mapKey][pointId]
         if existingPoint then
             if existingPoint.iconShape ~= custom_points.popup_state.iconShape[1] or
                 existingPoint.imageName ~= custom_points.popup_state.imageName[1] then
@@ -195,10 +272,11 @@ function custom_points.save_point()
         end
     end
 
-    boussole.config.customPoints[mapKey][pointId] = {
+    custom_points.data[mapKey][pointId] = {
         mapX = custom_points.popup_state.mapX,
         mapY = custom_points.popup_state.mapY,
         name = custom_points.popup_state.name[1],
+        note = custom_points.popup_state.note[1],
         iconShape = custom_points.popup_state.iconShape[1],
         color = {
             custom_points.popup_state.color[1],
@@ -211,7 +289,7 @@ function custom_points.save_point()
         applyColor = custom_points.popup_state.applyColor[1]
     }
 
-    settings.save()
+    custom_points.save_custom_points()
     custom_points.popup_state.open = false
 end
 
@@ -219,12 +297,12 @@ end
 function custom_points.delete_point()
     local mapKey = custom_points.get_map_key(custom_points.popup_state.zoneId, custom_points.popup_state.floorId)
 
-    if boussole.config.customPoints[mapKey] and custom_points.popup_state.pointId then
+    if custom_points.data[mapKey] and custom_points.popup_state.pointId then
         -- Clear texture cache if it exists
         custom_points.clear_texture_cache(custom_points.popup_state.imageName[1])
 
-        boussole.config.customPoints[mapKey][custom_points.popup_state.pointId] = nil
-        settings.save()
+        custom_points.data[mapKey][custom_points.popup_state.pointId] = nil
+        custom_points.save_custom_points()
     end
 
     custom_points.popup_state.open = false
@@ -328,7 +406,7 @@ function custom_points.draw(mapData, windowPosX, windowPosY, contentMinX, conten
     local floorId = mapData.entry.FloorId
     local mapKey = custom_points.get_map_key(zoneId, floorId)
 
-    local points = boussole.config.customPoints[mapKey]
+    local points = custom_points.data[mapKey]
     if not points then return end
 
     local drawList = imgui.GetWindowDrawList()
@@ -354,9 +432,19 @@ function custom_points.draw(mapData, windowPosX, windowPosY, contentMinX, conten
         local isHovered = mousePosX >= screenX - halfSize and mousePosX <= screenX + halfSize and
             mousePosY >= screenY - halfSize and mousePosY <= screenY + halfSize
 
-        if isHovered and point.name and point.name ~= '' then
+        if isHovered then
             local color = utils.rgb_to_abgr(point.color)
-            tooltip.add_line(point.name, color)
+            if point.name and point.name ~= '' then
+                tooltip.add_line(point.name, color)
+            end
+            if point.note and point.note ~= '' then
+                if point.name and point.name ~= '' then
+                    tooltip.add_separator()
+                end
+                for line in tostring(point.note):gmatch('[^\r\n]+') do
+                    tooltip.add_line(line, color)
+                end
+            end
         end
 
         -- Draw icon
@@ -369,11 +457,12 @@ end
 function custom_points.draw_popup()
     if not custom_points.popup_state.open then return end
 
-    imgui.OpenPopup('Custom Point')
+    imgui.OpenPopup('Custom point')
 
-    imgui.SetNextWindowSize({ 300, 350 }, ImGuiCond_FirstUseEver)
-    if imgui.BeginPopupModal('Custom Point', nil, bit.bor(ImGuiWindowFlags_NoResize, ImGuiWindowFlags_NoScrollWithMouse)) then
-        imgui.Text(custom_points.popup_state.editing and 'Edit Custom Point' or 'Add Custom Point')
+    local size = custom_points.popup_state.editing and { 300, 515 } or { 300, 430 }
+    imgui.SetNextWindowSize(size, ImGuiCond_OnAppearing)
+    if imgui.BeginPopupModal('Custom point', nil, bit.bor(ImGuiWindowFlags_NoResize, ImGuiWindowFlags_NoScrollWithMouse)) then
+        imgui.Text(custom_points.popup_state.editing and 'Edit custom point' or 'Add custom point')
         imgui.Separator()
         imgui.Spacing()
 
@@ -381,6 +470,12 @@ function custom_points.draw_popup()
         imgui.Text('Name:')
         imgui.SetNextItemWidth(-1)
         imgui.InputText('##Name', custom_points.popup_state.name, 128)
+        imgui.Spacing()
+
+        -- Note input
+        imgui.Text('Note:')
+        imgui.SetNextItemWidth(-1)
+        imgui.InputTextMultiline('##Note', custom_points.popup_state.note, 512, { -1, 80 })
         imgui.Spacing()
 
         -- Icon shape combo
