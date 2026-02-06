@@ -635,4 +635,23 @@ function map.get_custom_map_data(zoneId, floorId)
     return customMaps[zoneId][floorId]
 end
 
+function map.get_custom_map_zone_data(zoneId)
+    return customMaps[zoneId]
+end
+
+function map.get_custom_map_floors(zoneId)
+    local floors = {}
+    local zoneData = customMaps[zoneId]
+    if not zoneData then
+        return floors
+    end
+
+    for floorId, _ in pairs(zoneData) do
+        table.insert(floors, floorId)
+    end
+
+    table.sort(floors)
+    return floors
+end
+
 return map

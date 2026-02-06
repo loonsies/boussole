@@ -15,6 +15,7 @@ local tracked_entities = require('src.overlays.tracked_entities')
 local tooltip = require('src.overlays.tooltip')
 local controls = require('src.overlays.controls')
 local panel = require('src.overlays.panel')
+local map_data_editor = require('src.map_data_editor')
 local ffi = require('ffi')
 
 -- Cached map texture
@@ -164,7 +165,7 @@ function ui.drawUI()
     imgui.SetNextWindowSize({ 800, 600 }, ImGuiCond_FirstUseEver)
     imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 })
 
-    if imgui.Begin('boussole', boussole.visible, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoScrollWithMouse)) then
+    if imgui.Begin(ICON_FA_COMPASS .. ' boussole', boussole.visible, bit.bor(ImGuiWindowFlags_NoScrollbar, ImGuiWindowFlags_NoScrollWithMouse)) then
         imgui.PopStyleVar()
 
         -- Track window focus state
@@ -400,6 +401,11 @@ function ui.drawUI()
                     0xFFFFFFFF -- White tint
                 )
 
+                map_data_editor.draw_bounds(map.current_map_data, windowPosX, windowPosY,
+                    contentMinX, contentMinY,
+                    ui.map_offset.x, ui.map_offset.y,
+                    ui.map_zoom, ui.map_texture.width)
+
                 info_overlay.draw(windowPosX, windowPosY, contentMinX, contentMinY, map.current_map_data)
 
                 -- Reset tooltip state for this frame
@@ -477,6 +483,8 @@ function ui.drawUI()
                 end
 
                 custom_points.draw_popup()
+
+                map_data_editor.draw_window()
 
                 ui.save_view_state_debounce()
             end

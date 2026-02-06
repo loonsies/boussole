@@ -31,10 +31,7 @@ local function draw_map_tab_tracker()
         return
     end
 
-    imgui.Separator()
-    imgui.Text('Tracker')
-    imgui.Spacing()
-
+    imgui.SeparatorText(ICON_FA_LOCATION_DOT .. ' Tracker')
 
     -- Profile management
     imgui.SetNextItemWidth(150)
@@ -78,7 +75,7 @@ local function draw_map_tab_tracker()
     end
 
     imgui.SameLine()
-    if imgui.Button('Save', { 50, 0 }) then
+    if imgui.Button(ICON_FA_FLOPPY_DISK, { 50, 0 }) then
         if currentProfile ~= '' then
             tracker.save_profile(currentProfile)
             tracker.save_tracker_data()
@@ -114,7 +111,7 @@ local function draw_map_tab_tracker()
     end
 
     imgui.SameLine()
-    if imgui.Button('Del', { 50, 0 }) then
+    if imgui.Button(ICON_FA_TRASH, { 50, 0 }) then
         if currentProfile ~= '' then
             tracker.delete_profile(currentProfile)
             boussole.config.lastLoadedTrackerProfile = ''
@@ -124,7 +121,6 @@ local function draw_map_tab_tracker()
     end
 
     imgui.Spacing()
-    imgui.Separator()
 
     -- Tracker tabs
     if imgui.BeginTabBar('##TrackerTabs') then
@@ -175,7 +171,7 @@ local function draw_map_tab_tracker()
                 end)
             end
 
-            if imgui.Button('Add all', { -1, 0 }) then
+            if imgui.Button(ICON_FA_CHECK_DOUBLE .. ' Add all', { -1, 0 }) then
                 local added = 0
                 local existing = 0
                 for _, entity in ipairs(boussole.trackerSearchResults) do
@@ -245,7 +241,7 @@ local function draw_map_tab_tracker()
                 if selected then selectionCount = selectionCount + 1 end
             end
 
-            if imgui.Button(string.format('Track selection (%d)', selectionCount), { -1, 0 }) then
+            if imgui.Button(string.format(ICON_FA_SQUARE_CHECK .. ' Track selection (%d)', selectionCount), { -1, 0 }) then
                 local added = 0
                 local existing = 0
                 local zoneEntities = tracker.get_zone_entities()
@@ -270,7 +266,7 @@ local function draw_map_tab_tracker()
                 end
             end
 
-            if imgui.Button(string.format('Clear selection (%d)', selectionCount), { -1, 0 }) then
+            if imgui.Button(string.format(ICON_FA_SQUARE_XMARK .. ' Clear selection (%d)', selectionCount), { -1, 0 }) then
                 boussole.trackerSelections = {}
                 boussole.trackerSelection = -1
             end
@@ -382,14 +378,14 @@ local function draw_map_tab_tracker()
             -- Packet controls
             local isSending = tracker.is_sending_packets()
             if not isSending then
-                if imgui.Button('Single packet all', { -1, 0 }) then
+                if imgui.Button(ICON_FA_LIST_CHECK .. ' Single packet all', { -1, 0 }) then
                     tracker.send_all_packets()
                 end
             else
                 imgui.TextColored({ 1.0, 0.5, 0.2, 1.0 }, 'Sending packets...')
             end
 
-            if imgui.Button('Clear all', { -1, 0 }) then
+            if imgui.Button(ICON_FA_TRASH .. ' Clear all', { -1, 0 }) then
                 tracker.clear_all()
                 boussole.trackedSelection = -1
                 -- Clear tracked search results to trigger refresh
@@ -472,11 +468,11 @@ local function draw_map_tab(currentZone, currentFloor, selectedZoneName, filtere
         (boussole.manualFloorId[1] ~= currentFloor)
 
     if isBrowsingDifferentMap then
-        imgui.Text('Browse maps')
+        imgui.SeparatorText(ICON_FA_MAP_LOCATION .. ' Browse maps')
         imgui.SameLine()
         imgui.SetCursorPosX(imgui.GetCursorPosX() + 5)
 
-        local _, textH = imgui.CalcTextSize('Browse maps')
+        local _, textH = imgui.CalcTextSize(ICON_FA_MAP_LOCATION .. ' Browse maps')
         imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 })
         if imgui.Button('Current', { -1, textH }) then
             -- Return to current map
@@ -486,7 +482,7 @@ local function draw_map_tab(currentZone, currentFloor, selectedZoneName, filtere
         end
         imgui.PopStyleVar()
     else
-        imgui.Text('Browse maps')
+        imgui.SeparatorText(ICON_FA_MAP_LOCATION .. ' Browse maps')
     end
     imgui.Spacing()
 
@@ -526,7 +522,7 @@ local function draw_map_tab(currentZone, currentFloor, selectedZoneName, filtere
     if selZoneId == currentZone then
         table.insert(floorIds, currentFloor)
         local floorName = map.get_floor_name(selZoneId, currentFloor)
-        table.insert(floorNames, string.format('%s (Current)', floorName))
+        table.insert(floorNames, string.format('%s (current)', floorName))
     end
 
     local zonesFloors = map.get_floors_for_zone(selZoneId)
@@ -567,14 +563,14 @@ end
 
 local function draw_display_tab()
     -- Display Options
-    imgui.Text('Display Options')
-    imgui.Spacing()
+    imgui.SeparatorText(ICON_FA_FILTER .. ' Display options')
+
     if imgui.Checkbox('Homepoints', boussole.config.showHomepoints) then
         settings.save()
     end
     imgui.Spacing()
 
-    if imgui.Checkbox('Survival Guides', boussole.config.showSurvivalGuides) then
+    if imgui.Checkbox('Survival guides', boussole.config.showSurvivalGuides) then
         settings.save()
     end
     imgui.Spacing()
@@ -588,17 +584,14 @@ local function draw_display_tab()
     if imgui.Checkbox('Alliance members', boussole.config.showAlliance) then
         settings.save()
     end
-    if boussole.config.enableTracker[1] and imgui.Checkbox('Tracked Entities', boussole.config.showTrackedEntities) then
+    if boussole.config.enableTracker[1] and imgui.Checkbox('Tracked entities', boussole.config.showTrackedEntities) then
         settings.save()
     end
-    imgui.Spacing()
 
-    imgui.Separator()
-    imgui.Text('UI Appearance')
-    imgui.Spacing()
+    imgui.SeparatorText(ICON_FA_PALETTE .. ' UI appearance')
 
     imgui.PushItemWidth(100)
-    if imgui.InputInt('Panel Width', boussole.config.panelWidth, 10, 50) then
+    if imgui.InputInt('Panel width', boussole.config.panelWidth, 10, 50) then
         if boussole.config.panelWidth[1] < 100 then
             boussole.config.panelWidth[1] = 100
         elseif boussole.config.panelWidth[1] > 400 then
@@ -610,7 +603,7 @@ local function draw_display_tab()
     imgui.Spacing()
 
     imgui.Separator()
-    imgui.Text('Icon Sizes')
+    imgui.Text('Icon sizes')
     imgui.PushItemWidth(100)
     if imgui.InputInt('Homepoint##IconSize', boussole.config.iconSizeHomepoint, 1, 5) then
         if boussole.config.iconSizeHomepoint[1] < 2 then
@@ -620,7 +613,7 @@ local function draw_display_tab()
         end
         settings.save()
     end
-    if imgui.InputInt('Survival Guide##IconSize', boussole.config.iconSizeSurvivalGuide, 1, 5) then
+    if imgui.InputInt('Survival guide##IconSize', boussole.config.iconSizeSurvivalGuide, 1, 5) then
         if boussole.config.iconSizeSurvivalGuide[1] < 2 then
             boussole.config.iconSizeSurvivalGuide[1] = 2
         elseif boussole.config.iconSizeSurvivalGuide[1] > 20 then
@@ -659,22 +652,22 @@ local function draw_display_tab()
     imgui.Separator()
     imgui.Text('Colors')
     if imgui.ColorEdit4('Homepoint##Color', boussole.config.colorHomepoint, ImGuiColorEditFlags_NoInputs) then settings.save() end
-    if imgui.ColorEdit4('Survival Guide##Color', boussole.config.colorSurvivalGuide, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Survival guide##Color', boussole.config.colorSurvivalGuide, ImGuiColorEditFlags_NoInputs) then settings.save() end
     if imgui.ColorEdit4('Player (me)##Color', boussole.config.colorPlayer, ImGuiColorEditFlags_NoInputs) then settings.save() end
     if imgui.ColorEdit4('Party##Color', boussole.config.colorParty, ImGuiColorEditFlags_NoInputs) then settings.save() end
     if imgui.ColorEdit4('Alliance##Color', boussole.config.colorAlliance, ImGuiColorEditFlags_NoInputs) then settings.save() end
-    if imgui.ColorEdit4('Info Panel Bg##Color', boussole.config.colorInfoPanelBg, ImGuiColorEditFlags_NoInputs) then settings.save() end
-    if imgui.ColorEdit4('Panel Bg##Color', boussole.config.colorPanelBg, ImGuiColorEditFlags_NoInputs) then settings.save() end
-    if imgui.ColorEdit4('Toggle Btn##Color', boussole.config.colorToggleBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
-    if imgui.ColorEdit4('Controls Btn##Color', boussole.config.colorControlsBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
-    if imgui.ColorEdit4('Controls Btn Active##Color', boussole.config.colorControlsBtnActive, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Info panel bg##Color', boussole.config.colorInfoPanelBg, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Panel bg##Color', boussole.config.colorPanelBg, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Toggle btn##Color', boussole.config.colorToggleBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Controls btn##Color', boussole.config.colorControlsBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Controls btn active##Color', boussole.config.colorControlsBtnActive, ImGuiColorEditFlags_NoInputs) then settings.save() end
     imgui.Spacing()
 
-    -- Info Panel
+    -- Info panel
     imgui.Separator()
-    imgui.Text('Info Panel')
+    imgui.Text('Info panel')
     imgui.PushItemWidth(100)
-    if imgui.InputInt('Font Size##InfoPanel', boussole.config.infoPanelFontSize, 1, 2) then
+    if imgui.InputInt('Font size##InfoPanel', boussole.config.infoPanelFontSize, 1, 2) then
         if boussole.config.infoPanelFontSize[1] < 8 then
             boussole.config.infoPanelFontSize[1] = 8
         elseif boussole.config.infoPanelFontSize[1] > 24 then
@@ -687,8 +680,7 @@ local function draw_display_tab()
 end
 
 local function draw_misc_tab(selZoneId)
-    imgui.Text('Map redirects')
-    imgui.Spacing()
+    imgui.SeparatorText(ICON_FA_ROUTE .. ' Map redirects')
 
     -- Initialize redirect state if needed
     if not boussole.redirectState then
@@ -735,7 +727,7 @@ local function draw_misc_tab(selZoneId)
     imgui.SetNextItemWidth(inputWidth)
     imgui.InputInt('Y##off', boussole.redirectState.offsetY)
 
-    local buttonLabel = isEditing and 'Save Changes' or 'Add Redirect'
+    local buttonLabel = isEditing and ICON_FA_FLOPPY_DISK .. ' Save changes' or ICON_FA_CIRCLE_PLUS .. ' Add redirect'
     if imgui.Button(buttonLabel, { -1, 0 }) then
         -- If editing, remove the old redirect first
         if isEditing then
@@ -781,7 +773,7 @@ local function draw_misc_tab(selZoneId)
             boussole.redirectState.offsetY[1] = 0
         end
     else
-        if imgui.Button('Use Current', { -1, 0 }) then
+        if imgui.Button(ICON_FA_ARROWS_ROTATE .. ' Use current', { -1, 0 }) then
             boussole.redirectState.sourceZone[1] = selZoneId
             boussole.redirectState.sourceFloor[1] = boussole.manualFloorId[1]
         end
@@ -857,11 +849,21 @@ local function draw_misc_tab(selZoneId)
     end
     imgui.EndChild()
 
-    imgui.Spacing()
+    imgui.SeparatorText(ICON_FA_WRENCH .. ' Map options')
 
-    imgui.Separator()
-    imgui.Spacing()
-    imgui.Text('Map options')
+    if imgui.Button(ICON_FA_FILE_PEN .. ' Map data editor', { -1, 0 }) then
+        if not boussole.mapDataEditor then
+            boussole.mapDataEditor = {
+                visible = { true },
+                selectedZoneId = 0,
+                selectedFloorId = nil,
+                edit = {},
+                lastCopiedAt = 0
+            }
+        else
+            boussole.mapDataEditor.visible[1] = true
+        end
+    end
     imgui.Spacing()
 
     if imgui.Checkbox('Use custom maps', boussole.config.useCustomMaps) then
@@ -873,13 +875,10 @@ local function draw_misc_tab(selZoneId)
         settings.save()
     end
     imgui.ShowHelp('Enables the tracker feature, which allows sending packets manually to get entities positions. USE WITH CAUTION, it\'s literally cheating, so you put your account at risk.', true)
-    imgui.Spacing()
 
     -- Tracker settings (only show if tracker is enabled)
     if boussole.config.enableTracker[1] then
-        imgui.Separator()
-        imgui.Text('Tracker settings')
-        imgui.Spacing()
+        imgui.SeparatorText(ICON_FA_LOCATION_DOT .. ' Tracker settings')
 
         -- Packet delay control
         imgui.Text('Packet delay (seconds):')
@@ -912,7 +911,7 @@ local function draw_misc_tab(selZoneId)
     end
 
     local ui = require('src.ui')
-    if imgui.Button('Export map as BMP', { -1, 0 }) then
+    if imgui.Button(ICON_FA_FILE_EXPORT .. ' Export map as BMP', { -1, 0 }) then
         local success, result = export.save_map(ui.texture_id, map.current_map_data)
         if success then
             print(chat.header(addon.name):append(chat.success(string.format('Map exported to: %s', result))))
@@ -953,7 +952,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
     local zoneNames = {}
 
     if currentZoneName and currentZoneName ~= '' then
-        zoneNames = { currentZoneName .. ' (Current)' }
+        zoneNames = { currentZoneName .. ' (current)' }
     else
         zoneNames = { currentZoneName }
     end

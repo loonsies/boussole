@@ -15,6 +15,7 @@ local map = require('src.map')
 local texture = require('src.texture')
 local warp_points = require('src.warp_points')
 local tracker = require('src.tracker')
+local map_data_editor = require('src.map_data_editor')
 
 boussole = {
     config = {},
@@ -41,7 +42,25 @@ boussole = {
     trackerSearchResults = {},
     trackerSelection = -1,
     trackerSelections = {},
-    trackedSelection = -1
+    trackedSelection = -1,
+    mapDataEditor = {
+        visible = { false },
+        selectedZoneId = 0,
+        selectedFloorId = nil,
+        edit = {},
+        lastCopiedAt = 0,
+        addFloor = {
+            id = { 0 },
+            subZoneName = { '' },
+            copyFromSelected = { true },
+            error = ''
+        },
+        deleteFloor = {
+            error = ''
+        },
+        drawBorders3D = { true },
+        drawBorders2D = { true }
+    }
 }
 
 ashita.events.register('load', 'load_cb', function ()
@@ -140,6 +159,10 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
     end
 
     ui.update()
+end)
+
+ashita.events.register('d3d_beginscene', 'd3d_beginscene_cb', function ()
+    map_data_editor.draw_world_bounds()
 end)
 
 ashita.events.register('command', 'command_cb', function (cmd, nType)
