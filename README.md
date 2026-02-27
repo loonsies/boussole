@@ -13,8 +13,8 @@
 </p>
 
 
-[!IMPORTANT]
-Boussole now only supports Ashita 4.30. If you are still using 4.16, please update your installation or continue using <a href="https://github.com/loonsies/boussole/releases/tag/1.00">this release</a>. No support or backports will be provided for 4.16.
+> [!IMPORTANT]
+> Boussole now only supports Ashita 4.30. If you are still using 4.16, please update your installation or continue using <a href="https://github.com/loonsies/boussole/releases/tag/1.00">this release</a>. No support or backports will be provided for 4.16.
 
 # Features
 - Zone/floor-aware map with pan & zoom
@@ -70,5 +70,6 @@ Boussole now only supports Ashita 4.30. If you are still using 4.16, please upda
 
 # Credits and thanks
 atom0s & Thorny for providing code and help
+
 
 
