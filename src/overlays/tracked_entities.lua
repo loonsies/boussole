@@ -5,8 +5,16 @@ local imgui = require('imgui')
 local map = require('src.map')
 local tooltip = require('src.overlays.tooltip')
 
-function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
-    if not boussole.config.showTrackedEntities[1] or not boussole.config.enableTracker[1] or not mapData or not mapData.entry then
+function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
+    contextConfig = contextConfig or boussole.config
+    contextAlpha = contextAlpha or 1.0
+    local showLabels
+    if contextLabels ~= nil then
+        showLabels = contextLabels
+    else
+        showLabels = contextConfig.showLabels[1]
+    end
+    if not contextConfig.showTrackedEntities[1] or not contextConfig.enableTracker[1] or not mapData or not mapData.entry then
         return
     end
 
@@ -14,7 +22,7 @@ function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, con
     local activeEntities = tracker.get_active_entities()
     local locationCache = tracker.get_location_cache()
 
-    local iconSize = boussole.config.iconSizeTrackedEntity and boussole.config.iconSizeTrackedEntity[1] or 10
+    local iconSize = contextConfig.iconSizeTrackedEntity and contextConfig.iconSizeTrackedEntity[1] or 10
     local drawList = imgui.GetWindowDrawList()
 
     local entMgr = AshitaCore:GetMemoryManager():GetEntity()
@@ -86,7 +94,7 @@ function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, con
 
                         -- Get entity color
                         local color = entity.color or { 0.0, 1.0, 0.5, 1.0 }
-                        local colorU32 = utils.rgb_to_abgr(color)
+                        local colorU32 = utils.mul_alpha(utils.rgb_to_abgr(color), contextAlpha)
 
                         -- Draw filled circle for entity
                         drawList:AddCircleFilled(
@@ -99,7 +107,7 @@ function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, con
                         drawList:AddCircle(
                             { screenX, screenY },
                             iconSize,
-                            0xFF000000,
+                            utils.mul_alpha(0xFF000000, contextAlpha),
                             0,
                             2.0
                         )
@@ -114,7 +122,7 @@ function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, con
                         end
 
                         -- Draw label above marker if showLabels is enabled
-                        if boussole.config.showLabels[1] then
+                        if showLabels then
                             local displayName = entity.alias or entity.name
                             local textWidth, textHeight = imgui.CalcTextSize(displayName)
                             local labelX = screenX - textWidth / 2
@@ -122,7 +130,7 @@ function tracked_entities.draw(mapData, windowPosX, windowPosY, contentMinX, con
                             local padding = 4
 
                             -- Draw background
-                            local bgColor = utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 })
+                            local bgColor = utils.mul_alpha(utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 }), contextAlpha)
                             drawList:AddRectFilled(
                                 { labelX - padding, labelY - padding },
                                 { labelX + textWidth + padding, labelY + textHeight + padding },

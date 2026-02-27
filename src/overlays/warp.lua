@@ -12,7 +12,9 @@ local hovered_type = nil
 local hovered_index = 0
 
 -- Draw warp point markers on the map
-function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
+function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha)
+    contextConfig = contextConfig or boussole.config
+    contextAlpha = contextAlpha or 1.0
     if not mapData then return end
 
     local resMgr = AshitaCore:GetResourceManager()
@@ -36,7 +38,7 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
     local hoverRadius = 10.0
 
     -- Draw homepoints for current zone (if enabled)
-    if boussole.config.showHomepoints[1] then
+    if contextConfig.showHomepoints[1] then
         local homepoints = warp_points.homepoints[zoneId]
         if homepoints then
             for idx, point in ipairs(homepoints) do
@@ -68,9 +70,9 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
                         hovered_index = idx
                     end
 
-                    local markerRadius = boussole.config.iconSizeHomepoint[1] or 8.0
-                    local markerColor = utils.rgb_to_abgr(boussole.config.colorHomepoint)
-                    local outlineColor = 0xFFFFFFFF
+                    local markerRadius = contextConfig.iconSizeHomepoint[1] or 8.0
+                    local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorHomepoint), contextAlpha)
+                    local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
 
                     -- Draw as a diamond shape
                     local size = markerRadius
@@ -109,7 +111,7 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
         end
     end
 
-    if boussole.config.showSurvivalGuides[1] then
+    if contextConfig.showSurvivalGuides[1] then
         local survival_guides = warp_points.survival_guides[zoneId]
         if survival_guides then
             for idx, point in ipairs(survival_guides) do
@@ -141,9 +143,9 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
                         hovered_index = 0 -- No index for survival guides
                     end
 
-                    local markerRadius = boussole.config.iconSizeSurvivalGuide[1] or 8.0
-                    local markerColor = utils.rgb_to_abgr(boussole.config.colorSurvivalGuide)
-                    local outlineColor = 0xFFFFFFFF
+                    local markerRadius = contextConfig.iconSizeSurvivalGuide[1] or 8.0
+                    local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorSurvivalGuide), contextAlpha)
+                    local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
 
                     -- Draw as a square
                     local size = markerRadius * 0.8
@@ -172,9 +174,9 @@ function warp_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, content
         -- Determine color based on type
         local typeColor
         if hovered_type == 'Survival Guide' then
-            typeColor = utils.rgb_to_abgr(boussole.config.colorSurvivalGuide)
+            typeColor = utils.rgb_to_abgr(contextConfig.colorSurvivalGuide)
         else
-            typeColor = utils.rgb_to_abgr(boussole.config.colorHomepoint)
+            typeColor = utils.rgb_to_abgr(contextConfig.colorHomepoint)
         end
 
         -- Add title with index if applicable

@@ -35,10 +35,18 @@ function alliance_overlay.load_cursor_texture()
     return true
 end
 
-function alliance_overlay.draw(config, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
+function alliance_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
+    contextConfig = contextConfig or boussole.config
+    contextAlpha = contextAlpha or 1.0
+    local showLabels
+    if contextLabels ~= nil then
+        showLabels = contextLabels
+    else
+        showLabels = contextConfig.showLabels[1]
+    end
     if not mapData then return end
 
-    if not config.showAlliance or not config.showAlliance[1] then return end
+    if not contextConfig.showAlliance or not contextConfig.showAlliance[1] then return end
 
     if not alliance_overlay.cursor_texture then
         alliance_overlay.load_cursor_texture()
@@ -54,7 +62,7 @@ function alliance_overlay.draw(config, mapData, windowPosX, windowPosY, contentM
     local drawList = imgui.GetWindowDrawList()
     local mousePosX, mousePosY = imgui.GetMousePos()
 
-    local cursorSize = boussole.config.iconSizeAlliance[1] or 20.0
+    local cursorSize = contextConfig.iconSizeAlliance[1] or 20.0
     local halfSize = cursorSize / 2.0
     local texturePointer = tonumber(ffi.cast('uint32_t', alliance_overlay.cursor_texture))
 
@@ -90,7 +98,7 @@ function alliance_overlay.draw(config, mapData, windowPosX, windowPosY, contentM
                         local sin_angle = math.sin(heading)
 
                         -- Draw label above alliance member if showLabels is enabled
-                        if boussole.config.showLabels[1] then
+                        if showLabels then
                             local memberName = entity.Name or ('Alliance ' .. i)
                             local textWidth, textHeight = imgui.CalcTextSize(memberName)
                             local labelX = screenX - textWidth / 2
@@ -98,7 +106,7 @@ function alliance_overlay.draw(config, mapData, windowPosX, windowPosY, contentM
                             local padding = 4
 
                             -- Draw background
-                            local bgColor = utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 })
+                            local bgColor = utils.mul_alpha(utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 }), contextAlpha)
                             drawList:AddRectFilled(
                                 { labelX - padding, labelY - padding },
                                 { labelX + textWidth + padding, labelY + textHeight + padding },
@@ -107,7 +115,7 @@ function alliance_overlay.draw(config, mapData, windowPosX, windowPosY, contentM
                             )
 
                             -- Draw text with alliance color
-                            local textColor = utils.rgb_to_abgr(boussole.config.colorAlliance)
+                            local textColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorAlliance), contextAlpha)
                             drawList:AddText({ labelX, labelY }, textColor, memberName)
                         end
 
@@ -136,13 +144,13 @@ function alliance_overlay.draw(config, mapData, windowPosX, windowPosY, contentM
                         if distance <= halfSize then
                             local memberName = entity.Name
                             if memberName and memberName ~= '' then
-                                local color = utils.rgb_to_abgr(boussole.config.colorAlliance)
+                                local color = utils.rgb_to_abgr(contextConfig.colorAlliance)
                                 tooltip.add_line(string.format('%s (Alliance)', memberName), color)
                             end
                         end
 
                         if texturePointer then
-                            local color = utils.rgb_to_abgr(boussole.config.colorAlliance)
+                            local color = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorAlliance), contextAlpha)
                             drawList:AddImageQuad(
                                 texturePointer,
                                 rotated_corners[1],

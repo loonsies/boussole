@@ -58,7 +58,6 @@
 
 # Planned features
 - Fullscreen map
-- Minimap
 - Uber Warp integration
 - Websocket support for LS position update
 - Hide maps if not in possession of the map key item

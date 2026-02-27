@@ -922,6 +922,136 @@ local function draw_misc_tab(selZoneId)
     imgui.Spacing()
 end
 
+local function draw_minimap_tab()
+    -- Minimap-specific settings
+    imgui.SeparatorText(ICON_FA_MAP .. ' Minimap')
+
+    if imgui.Checkbox('Visible', boussole.config.minimapVisible) then
+        settings.save()
+    end
+    imgui.SameLine()
+    if imgui.Checkbox('Locked', boussole.config.minimapLocked) then
+        settings.save()
+    end
+    imgui.Spacing()
+
+    imgui.PushItemWidth(100)
+    if imgui.InputInt('Size (px)', boussole.config.minimapSize, 10, 50) then
+        if boussole.config.minimapSize[1] < 80 then
+            boussole.config.minimapSize[1] = 80
+        elseif boussole.config.minimapSize[1] > 600 then
+            boussole.config.minimapSize[1] = 600
+        end
+        settings.save()
+    end
+
+    if imgui.InputFloat('Zoom step', boussole.config.minimapZoomStep, 0.01, 0.1, '%.2f') then
+        if boussole.config.minimapZoomStep[1] < 0.01 then
+            boussole.config.minimapZoomStep[1] = 0.01
+        elseif boussole.config.minimapZoomStep[1] > 1.0 then
+            boussole.config.minimapZoomStep[1] = 1.0
+        end
+        settings.save()
+    end
+
+    if imgui.InputFloat('Corner radius', boussole.config.minimapCornerRadius, 1.0, 5.0, '%.0f') then
+        if boussole.config.minimapCornerRadius[1] < 0.0 then
+            boussole.config.minimapCornerRadius[1] = 0.0
+        elseif boussole.config.minimapCornerRadius[1] > 50.0 then
+            boussole.config.minimapCornerRadius[1] = 50.0
+        end
+        settings.save()
+    end
+
+    if imgui.InputFloat('Recenter delay', boussole.config.minimapRecenterTimeout, 0.5, 1.0, '%.1f') then
+        if boussole.config.minimapRecenterTimeout[1] < 0.0 then
+            boussole.config.minimapRecenterTimeout[1] = 0.0
+        elseif boussole.config.minimapRecenterTimeout[1] > 60.0 then
+            boussole.config.minimapRecenterTimeout[1] = 60.0
+        end
+        settings.save()
+    end
+    if imgui.IsItemHovered() then imgui.SetTooltip('Seconds after dragging before re-centering on player. 0 = disabled.') end
+    imgui.PopItemWidth()
+
+    if imgui.Checkbox('Recenter when player moves##MM', boussole.config.minimapRecenterOnMove) then
+        settings.save()
+    end
+    if imgui.IsItemHovered() then imgui.SetTooltip('Automatically re-center the minimap when the player starts moving after a right-click drag.') end
+
+    imgui.PushItemWidth(120)
+    if imgui.SliderFloat('Map opacity', boussole.config.minimapOpacity, 0.0, 1.0, '%.2f') then
+        settings.save()
+    end
+    if imgui.SliderFloat('Overlay opacity', boussole.config.minimapOverlayOpacity, 0.0, 1.0, '%.2f') then
+        settings.save()
+    end
+    imgui.PopItemWidth()
+    imgui.Spacing()
+
+    if imgui.Checkbox('Show labels##MM', boussole.config.minimapShowLabels) then
+        settings.save()
+    end
+
+    imgui.SeparatorText(ICON_FA_FILTER .. ' Display options')
+
+    if imgui.Checkbox('Homepoints##MM', boussole.config.minimapShowHomepoints) then settings.save() end
+    if imgui.Checkbox('Survival guides##MM', boussole.config.minimapShowSurvivalGuides) then settings.save() end
+    if imgui.Checkbox('Player (me)##MM', boussole.config.minimapShowPlayer) then settings.save() end
+    if imgui.Checkbox('Party members##MM', boussole.config.minimapShowParty) then settings.save() end
+    if imgui.Checkbox('Alliance members##MM', boussole.config.minimapShowAlliance) then settings.save() end
+    if boussole.config.enableTracker[1] then
+        if imgui.Checkbox('Tracked entities##MM', boussole.config.minimapShowTrackedEntities) then settings.save() end
+    end
+
+    imgui.SeparatorText(ICON_FA_PALETTE .. ' UI appearance')
+
+    imgui.Separator()
+    imgui.Text('Icon sizes')
+    imgui.PushItemWidth(100)
+    if imgui.InputInt('Homepoint##MMIconSize', boussole.config.minimapIconSizeHomepoint, 1, 5) then
+        boussole.config.minimapIconSizeHomepoint[1] = math.max(2, math.min(20, boussole.config.minimapIconSizeHomepoint[1]))
+        settings.save()
+    end
+    if imgui.InputInt('Survival guide##MMIconSize', boussole.config.minimapIconSizeSurvivalGuide, 1, 5) then
+        boussole.config.minimapIconSizeSurvivalGuide[1] = math.max(2, math.min(20, boussole.config.minimapIconSizeSurvivalGuide[1]))
+        settings.save()
+    end
+    if imgui.InputInt('Player##MMIconSize', boussole.config.minimapIconSizePlayer, 1, 5) then
+        boussole.config.minimapIconSizePlayer[1] = math.max(4, math.min(40, boussole.config.minimapIconSizePlayer[1]))
+        settings.save()
+    end
+    if imgui.InputInt('Party##MMIconSize', boussole.config.minimapIconSizeParty, 1, 5) then
+        boussole.config.minimapIconSizeParty[1] = math.max(4, math.min(40, boussole.config.minimapIconSizeParty[1]))
+        settings.save()
+    end
+    if imgui.InputInt('Alliance##MMIconSize', boussole.config.minimapIconSizeAlliance, 1, 5) then
+        boussole.config.minimapIconSizeAlliance[1] = math.max(4, math.min(40, boussole.config.minimapIconSizeAlliance[1]))
+        settings.save()
+    end
+    if boussole.config.enableTracker[1] then
+        imgui.PushItemWidth(100)
+        if imgui.InputInt('Tracked entity##MMIconSize', boussole.config.minimapIconSizeTrackedEntity, 1, 5) then
+            boussole.config.minimapIconSizeTrackedEntity[1] = math.max(2, math.min(30, boussole.config.minimapIconSizeTrackedEntity[1]))
+            settings.save()
+        end
+        imgui.PopItemWidth()
+    end
+    imgui.PopItemWidth()
+    imgui.Spacing()
+
+    imgui.Separator()
+    imgui.Text('Colors')
+    if imgui.ColorEdit4('Homepoint##MMColor', boussole.config.minimapColorHomepoint, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Survival guide##MMColor', boussole.config.minimapColorSurvivalGuide, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Player (me)##MMColor', boussole.config.minimapColorPlayer, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Party##MMColor', boussole.config.minimapColorParty, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Alliance##MMColor', boussole.config.minimapColorAlliance, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Controls btn##MMColor', boussole.config.minimapColorControlsBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    if imgui.ColorEdit4('Controls btn active##MMColor', boussole.config.minimapColorControlsBtnActive, ImGuiColorEditFlags_NoInputs) then settings.save() end
+    imgui.Spacing()
+end
+
 function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)
     local x, y, z = map.get_player_position()
     local currentZone = map.get_player_zone()
@@ -1091,6 +1221,11 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
 
                 if imgui.BeginTabItem('Display') then
                     draw_display_tab()
+                    imgui.EndTabItem()
+                end
+
+                if imgui.BeginTabItem('Minimap') then
+                    draw_minimap_tab()
                     imgui.EndTabItem()
                 end
 

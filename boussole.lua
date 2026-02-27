@@ -17,6 +17,7 @@ local warp_points = require('src.warp_points')
 local tracker = require('src.tracker')
 local map_data_editor = require('src.map_data_editor')
 local custom_points = require('src.overlays.custom_points')
+local minimap = require('src.minimap')
 
 boussole = {
     config = {},
@@ -44,6 +45,7 @@ boussole = {
     trackerSelection = -1,
     trackerSelections = {},
     trackedSelection = -1,
+    minimapResetZoom = false,
     mapDataEditor = {
         visible = { false },
         selectedZoneId = 0,
@@ -164,6 +166,7 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
     end
 
     ui.update()
+    minimap.update()
 end)
 
 ashita.events.register('d3d_beginscene', 'd3d_beginscene_cb', function ()

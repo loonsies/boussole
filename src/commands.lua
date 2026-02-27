@@ -15,6 +15,8 @@ function commands.handleCommand(args)
                 return commands.handleShowUi()
             elseif arg == 'hide' then
                 return commands.handleHideUi()
+            elseif arg == 'minimap' then
+                return commands.handleToggleMinimap()
             elseif arg == 'genfloors' then
                 return commands.handleGenerateFloors()
             end
@@ -38,6 +40,12 @@ end
 
 function commands.handleHideUi()
     boussole.visible[1] = false
+    settings.save()
+    return true
+end
+
+function commands.handleToggleMinimap()
+    boussole.config.minimapVisible[1] = not boussole.config.minimapVisible[1]
     settings.save()
     return true
 end

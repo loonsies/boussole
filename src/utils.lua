@@ -54,4 +54,11 @@ function utils.round2(x)
     end
 end
 
+-- Multiply the alpha byte of a packed ABGR colour by a [0,1] factor
+function utils.mul_alpha(color, alpha)
+    local a = bit.rshift(bit.band(color, 0xFF000000), 24)
+    local rgb = bit.band(color, 0x00FFFFFF)
+    return bit.bor(bit.lshift(math.floor(a * alpha), 24), rgb)
+end
+
 return utils

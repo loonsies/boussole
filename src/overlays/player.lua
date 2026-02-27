@@ -37,18 +37,26 @@ function player_overlay.load_cursor_texture()
 end
 
 -- Draw player position
-function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
+function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
+    contextConfig = contextConfig or boussole.config
+    contextAlpha = contextAlpha or 1.0
+    local showLabels
+    if contextLabels ~= nil then
+        showLabels = contextLabels
+    else
+        showLabels = contextConfig.showLabels[1]
+    end
     if not mapData then return end
 
     -- Check if player display is enabled
-    if not boussole.config.showPlayer[1] then return end
+    if not contextConfig.showPlayer[1] then return end
 
     if not player_overlay.cursor_texture then
         player_overlay.load_cursor_texture()
     end
 
     if not player_overlay.cursor_texture then
-        player_overlay.draw_dot(mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
+        player_overlay.draw_dot(mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
         return
     end
 
@@ -76,14 +84,14 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
 
     local heading = (entity.Heading or 0) + (math.pi / 2)
 
-    local cursorSize = boussole.config.iconSizePlayer[1] or 20.0
+    local cursorSize = contextConfig.iconSizePlayer[1] or 20.0
     local halfSize = cursorSize / 2.0
 
     local cos_angle = math.cos(heading)
     local sin_angle = math.sin(heading)
 
     -- Draw label above player if showLabels is enabled
-    if boussole.config.showLabels[1] then
+    if showLabels then
         local playerName = entity.Name or 'Player'
         local drawList = imgui.GetWindowDrawList()
         local textWidth, textHeight = imgui.CalcTextSize(playerName)
@@ -92,7 +100,7 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
         local padding = 4
 
         -- Draw background
-        local bgColor = utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 })
+        local bgColor = utils.mul_alpha(utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 }), contextAlpha)
         drawList:AddRectFilled(
             { labelX - padding, labelY - padding },
             { labelX + textWidth + padding, labelY + textHeight + padding },
@@ -101,7 +109,7 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
         )
 
         -- Draw text with player color
-        local textColor = utils.rgb_to_abgr(boussole.config.colorPlayer)
+        local textColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorPlayer), contextAlpha)
         drawList:AddText({ labelX, labelY }, textColor, playerName)
     end
 
@@ -134,14 +142,14 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
     if distance <= hoverRadius then
         local playerName = entity.Name
         if playerName and playerName ~= '' then
-            local color = utils.rgb_to_abgr(boussole.config.colorPlayer)
+            local color = utils.rgb_to_abgr(contextConfig.colorPlayer)
             tooltip.add_line(string.format('%s (me)', playerName), color)
         end
     end
 
     local drawList = imgui.GetWindowDrawList()
     local texturePointer = tonumber(ffi.cast('uint32_t', player_overlay.cursor_texture))
-    local color = utils.rgb_to_abgr(boussole.config.colorPlayer)
+    local color = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorPlayer), contextAlpha)
     if texturePointer then
         drawList:AddImageQuad(
             texturePointer,
@@ -158,7 +166,8 @@ function player_overlay.draw(mapData, windowPosX, windowPosY, contentMinX, conte
     end
 end
 
-function player_overlay.draw_dot(mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth)
+function player_overlay.draw_dot(mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
+    contextAlpha = contextAlpha or 1.0
     -- Get player world position
     local playerX, playerY, playerZ = map.get_player_position()
     if not playerX then return end
@@ -203,8 +212,8 @@ function player_overlay.draw_dot(mapData, windowPosX, windowPosY, contentMinX, c
     -- Draw dot
     local drawList = imgui.GetWindowDrawList()
     local dotRadius = 5.0
-    local dotColor = 0xFF0000FF
-    local outlineColor = 0xFFFFFFFF
+    local dotColor = utils.mul_alpha(0xFF0000FF, contextAlpha)
+    local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
 
     drawList:AddCircleFilled({ screenX, screenY }, dotRadius, dotColor)
     drawList:AddCircle({ screenX, screenY }, dotRadius, outlineColor, 0, 1.5)
