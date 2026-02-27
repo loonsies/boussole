@@ -12,6 +12,10 @@
   <img width="875" height="899" alt="image" src="https://github.com/user-attachments/assets/03b574a8-0908-488a-9683-1395964dce5f" style="max-width: 100%;" />
 </p>
 
+
+[!IMPORTANT]
+Boussole now only supports Ashita 4.30. If you are still using 4.16, please update your installation or continue using <a href="https://github.com/loonsies/boussole/releases/tag/1.00">this release</a>. No support or backports will be provided for 4.16.
+
 # Features
 - Zone/floor-aware map with pan & zoom
 - Player / party / alliance cursors updated in real-time
@@ -66,4 +70,5 @@
 
 # Credits and thanks
 atom0s & Thorny for providing code and help
+
 
