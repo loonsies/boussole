@@ -46,6 +46,9 @@ boussole = {
     trackerSelections = {},
     trackedSelection = -1,
     minimapResetZoom = false,
+    zoning = false,
+    preZoneVisible = false,
+    preZoneMinimapVisible = false,
     mapDataEditor = {
         visible = { false },
         selectedZoneId = 0,
@@ -182,6 +185,12 @@ end)
 
 ashita.events.register('packet_in', 'packet_in_cb', function (e)
     if (e.id == 0x000A) then
+        if boussole.zoning then
+            boussole.visible[1]               = boussole.preZoneVisible
+            boussole.config.minimapVisible[1] = boussole.preZoneMinimapVisible
+            boussole.zoning                   = false
+        end
+
         if (struct.unpack('b', e.data_modified, 0x80 + 0x01) == 1) then
             map.clear_map_cache()
             boussole.last_floor_id = nil
@@ -234,6 +243,14 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                 boussole.last_floor_id = nil
             end
         end)
+    end
+
+    if e.id == 0x000B then
+        boussole.preZoneVisible           = boussole.visible[1]
+        boussole.preZoneMinimapVisible    = boussole.config.minimapVisible[1]
+        boussole.visible[1]               = false
+        boussole.config.minimapVisible[1] = false
+        boussole.zoning                   = true
     end
 
     -- Handle entity update packets for tracker
