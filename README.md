@@ -58,6 +58,7 @@
 - `/boussole` Toggles the UI
 - `/boussole show` Shows the UI
 - `/boussole hide` Hides the UI
+- `/boussole minimap` Toggles the minimap
 - `/boussole genfloors` Regenerates zonesFloors.lua
 
 # Planned features
@@ -70,6 +71,7 @@
 
 # Credits and thanks
 atom0s & Thorny for providing code and help
+
 
 
 
