@@ -1006,7 +1006,6 @@ local function draw_minimap_tab()
 
     imgui.SeparatorText(ICON_FA_PALETTE .. ' UI appearance')
 
-    imgui.Separator()
     imgui.Text('Icon sizes')
     imgui.PushItemWidth(100)
     if imgui.InputInt('Homepoint##MMIconSize', boussole.config.minimapIconSizeHomepoint, 1, 5) then
