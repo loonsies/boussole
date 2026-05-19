@@ -17,26 +17,21 @@ local profiles = {}
 local currentZoneId = 0
 local currentSubZoneId = 0
 
-local mem = ashita.memory
-
 local function detect_zone_and_subzone()
-    local zonePointer = mem.find('FFXiMain.dll', 0, '8B0D????????8B44240425FFFF00003B', 0x02, 0x00)
-    if zonePointer == 0 then
-        return nil, nil
+    local zonePointer = ashita.memory.find(0, 0, 'A1????????668B88????????668B90????????5152E8????????A3', 0x00, 0x00)
+    local offset1 = ashita.memory.read_uint32(zonePointer + 0x08)
+    local offset2 = ashita.memory.read_uint32(zonePointer + 0x0F)
+    local pointer = ashita.memory.read_uint32(zonePointer + 0x01)
+    local zone, subZone = nil, nil
+
+    if (pointer ~= 0) then
+        pointer = ashita.memory.read_uint32(pointer)
+        if (pointer ~= 0) then
+            zone = ashita.memory.read_uint32(pointer + offset2)
+            subZone = ashita.memory.read_uint16(pointer + offset1)
+        end
     end
 
-    local pointer = mem.read_uint32(zonePointer)
-    if pointer == 0 then
-        return nil, nil
-    end
-
-    pointer = mem.read_uint32(pointer + 0x04)
-    if pointer == 0 then
-        return nil, nil
-    end
-
-    local zone = mem.read_uint32(pointer + 0x3C2E0)
-    local subZone = mem.read_uint16(pointer + 0x3C2EA)
     return zone, subZone
 end
 

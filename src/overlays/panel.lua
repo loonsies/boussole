@@ -136,7 +136,7 @@ local function draw_map_tab_tracker()
 
             if not hasEntities then
                 local detectedZone, detectedSubZone = tracker.get_current_zone_and_subzone()
-                if detectedZone then
+                if detectedZone and detectedZone > 0 then
                     tracker.load_zone_entities(detectedZone, detectedSubZone)
                     zoneEntities = tracker.get_zone_entities()
                 end

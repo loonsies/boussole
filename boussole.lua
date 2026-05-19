@@ -1,5 +1,5 @@
 addon.name = 'boussole'
-addon.version = "1.05"
+addon.version = '1.05'
 addon.author = 'looney'
 addon.desc = 'Replacement for in-game map with additional features.'
 addon.link = 'https://github.com/loonsies/boussole'
@@ -116,7 +116,7 @@ ashita.events.register('load', 'load_cb', function ()
             boussole.last_sub_zone_id = currentSubZone or 0
 
             -- Load zone entities for tracker
-            if boussole.config.enableTracker[1] and currentZone then
+            if boussole.config.enableTracker[1] and currentZone and currentZone > 0 then
                 tracker.load_zone_entities(currentZone, currentSubZone)
 
                 if boussole.config.lastLoadedTrackerProfile and boussole.config.lastLoadedTrackerProfile ~= '' then
@@ -227,7 +227,7 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                 end
 
                 -- Load zone entities for tracker using proper subzone
-                if boussole.config.enableTracker[1] and newZone then
+                if boussole.config.enableTracker[1] and newZone and newZone > 0 then
                     tracker.load_zone_entities(newZone, newSubZone)
                     boussole.trackerSearchResults = {}
                     boussole.trackerSearch = { '' }
