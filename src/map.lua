@@ -639,6 +639,15 @@ function map.get_custom_map_zone_data(zoneId)
     return customMaps[zoneId]
 end
 
+function map.initialize_custom_map_zone_data(zoneId, zoneData)
+    if customMaps[zoneId] and next(customMaps[zoneId]) ~= nil then
+        return customMaps[zoneId]
+    end
+
+    customMaps[zoneId] = zoneData or {}
+    return customMaps[zoneId]
+end
+
 function map.get_custom_map_floors(zoneId)
     local floors = {}
     local zoneData = customMaps[zoneId]

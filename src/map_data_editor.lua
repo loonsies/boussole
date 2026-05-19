@@ -87,7 +87,6 @@ local function ensure_state()
             selectedZoneId = 0,
             selectedFloorId = nil,
             edit = {},
-            lastCopiedAt = 0,
             addFloor = {
                 id = { 0 },
                 subZoneName = { '' },
@@ -97,10 +96,26 @@ local function ensure_state()
             deleteFloor = {
                 error = ''
             },
+            initializeZone = {
+                error = '',
+                savedAt = 0
+            },
+            save = {
+                error = '',
+                savedAt = 0
+            },
             drawBorders3D = { true },
             drawBorders2D = { true }
         }
     end
+    boussole.mapDataEditor.initializeZone = boussole.mapDataEditor.initializeZone or {
+        error = '',
+        savedAt = 0
+    }
+    boussole.mapDataEditor.save = boussole.mapDataEditor.save or {
+        error = '',
+        savedAt = 0
+    }
     return boussole.mapDataEditor
 end
 
@@ -184,6 +199,8 @@ local function get_next_floor_id(zoneData)
     return nextId
 end
 
+local format_number
+
 local function build_new_floor_data(base, subZoneName)
     return {
         scalingX = (base and base.scalingX) or 1.0,
@@ -199,6 +216,231 @@ local function build_new_floor_data(base, subZoneName)
         referenceSize = (base and base.referenceSize) or 512,
         subZoneName = subZoneName or ''
     }
+end
+
+local function build_floor_data_from_dat_entry(entry, subZoneName)
+    if not entry or entry._isCustomMap then
+        return build_new_floor_data(nil, subZoneName)
+    end
+
+    local scale = math.abs(entry.Scale or 0)
+    if scale == 0 then
+        return build_new_floor_data(nil, subZoneName)
+    end
+
+    local scalingX = scale / 5.0
+    local scalingY = -scalingX
+    local offsetX = -(entry.OffsetX or 0)
+    local offsetY = -(entry.OffsetY or 0)
+    local referenceSize = 512
+
+    local worldX1 = (0 - offsetX) / scalingX
+    local worldX2 = (referenceSize - offsetX) / scalingX
+    local worldY1 = (0 - offsetY) / scalingY
+    local worldY2 = (referenceSize - offsetY) / scalingY
+
+    return {
+        scalingX = scalingX,
+        offsetX = offsetX,
+        scalingY = scalingY,
+        offsetY = offsetY,
+        minX = math.min(worldX1, worldX2),
+        minY = math.min(worldY1, worldY2),
+        minZ = -10000,
+        maxX = math.max(worldX1, worldX2),
+        maxY = math.max(worldY1, worldY2),
+        maxZ = 10000,
+        referenceSize = referenceSize,
+        subZoneName = subZoneName or ''
+    }
+end
+
+local function get_zone_name(zoneId)
+    local resourceMgr = AshitaCore:GetResourceManager()
+    if not resourceMgr then
+        return ''
+    end
+
+    return resourceMgr:GetString('zones.names', zoneId) or ''
+end
+
+local function lua_escape(value)
+    return tostring(value)
+        :gsub('\\', '\\\\')
+        :gsub('\'', '\\\'')
+        :gsub('\n', '\\n')
+        :gsub('\r', '\\r')
+        :gsub('\t', '\\t')
+end
+
+local function build_lua_floor_entry(floorId, data)
+    local subZone = data.subZoneName or ''
+    local comment = ''
+    if subZone ~= '' then
+        comment = ' -- ' .. subZone
+    end
+
+    return string.format(
+        '        [%d] = {%s\n' ..
+        '            scalingX      = %s,\n' ..
+        '            offsetX       = %s,\n' ..
+        '            scalingY      = %s,\n' ..
+        '            offsetY       = %s,\n' ..
+        '            minX          = %s,\n' ..
+        '            minY          = %s,\n' ..
+        '            minZ          = %s,\n' ..
+        '            maxX          = %s,\n' ..
+        '            maxY          = %s,\n' ..
+        '            maxZ          = %s,\n' ..
+        '            referenceSize = %s,\n' ..
+        '            subZoneName   = \'%s\'\n' ..
+        '        }',
+        floorId,
+        comment,
+        format_number(data.scalingX),
+        format_number(data.offsetX),
+        format_number(data.scalingY),
+        format_number(data.offsetY),
+        format_number(data.minX),
+        format_number(data.minY),
+        format_number(data.minZ),
+        format_number(data.maxX),
+        format_number(data.maxY),
+        format_number(data.maxZ),
+        format_number(data.referenceSize),
+        lua_escape(subZone)
+    )
+end
+
+local function build_lua_zone_entry(zoneId, zoneData, zoneName)
+    local zoneComment = ''
+    if zoneName and zoneName ~= '' then
+        zoneComment = '    -- ' .. zoneName
+    end
+
+    local output = string.format('    [%d] = {%s\n', zoneId, zoneComment)
+    local floors = get_sorted_floors(zoneData)
+    for i, floorId in ipairs(floors) do
+        output = output .. build_lua_floor_entry(floorId, zoneData[floorId])
+        if i < #floors then
+            output = output .. ',\n\n'
+        else
+            output = output .. '\n'
+        end
+    end
+
+    return output .. '    },'
+end
+
+local function find_zone_entry_block(content, zoneId)
+    local pattern = '\n    %[' .. tostring(zoneId) .. '%]%s*=%s*{'
+    local startPos, endPos = content:find(pattern)
+    if not startPos then
+        return nil, nil
+    end
+
+    local depth = 1
+    local pos = endPos + 1
+    local quote = nil
+    local escaped = false
+
+    while pos <= #content do
+        local ch = content:sub(pos, pos)
+        local nextCh = content:sub(pos + 1, pos + 1)
+
+        if quote then
+            if escaped then
+                escaped = false
+            elseif ch == '\\' then
+                escaped = true
+            elseif ch == quote then
+                quote = nil
+            end
+        elseif ch == '\'' or ch == '"' then
+            quote = ch
+        elseif ch == '-' and nextCh == '-' then
+            local lineEnd = content:find('\n', pos + 2, true)
+            if not lineEnd then
+                return nil, nil
+            end
+            pos = lineEnd
+        elseif ch == '{' then
+            depth = depth + 1
+        elseif ch == '}' then
+            depth = depth - 1
+            if depth == 0 then
+                local blockEnd = pos
+                if content:sub(blockEnd + 1, blockEnd + 1) == ',' then
+                    blockEnd = blockEnd + 1
+                end
+                return startPos, blockEnd
+            end
+        end
+
+        pos = pos + 1
+    end
+
+    return nil, nil
+end
+
+local function save_zone_to_maps_file(zoneId, zoneData, zoneName)
+    local mapsPath = string.format('%saddons\\boussole\\data\\maps.lua', AshitaCore:GetInstallPath())
+    local file = io.open(mapsPath, 'rb')
+    if not file then
+        return false, 'Unable to open data/maps.lua for reading.'
+    end
+
+    local content = file:read('*a')
+    file:close()
+
+    local floors = zoneData and get_sorted_floors(zoneData) or {}
+    local blockStart, blockEnd = find_zone_entry_block(content, zoneId)
+    local updated = nil
+
+    if #floors == 0 then
+        if not blockStart then
+            return true
+        end
+
+        local beforeBlock = content:sub(1, blockStart - 1)
+        local afterBlock = content:sub(blockEnd + 1)
+        updated = beforeBlock .. afterBlock
+    elseif blockStart then
+        updated = content:sub(1, blockStart - 1) .. '\n' .. build_lua_zone_entry(zoneId, zoneData, zoneName) .. content:sub(blockEnd + 1)
+    else
+        local insertText = '\n\n' .. build_lua_zone_entry(zoneId, zoneData, zoneName)
+        local insertPos = content:find('\n}%s*return maps%s*$')
+        if not insertPos then
+            return false, 'Could not find the end of data/maps.lua.'
+        end
+        local beforeInsert = content:sub(1, insertPos - 1)
+        if not beforeInsert:match(',%s*$') then
+            beforeInsert = beforeInsert .. ','
+        end
+        updated = beforeInsert .. insertText .. content:sub(insertPos)
+    end
+
+    file = io.open(mapsPath, 'wb')
+    if not file then
+        return false, 'Unable to open data/maps.lua for writing.'
+    end
+
+    file:write(updated)
+    file:close()
+    return true
+end
+
+local function save_current_zone(state, zoneId, zoneData)
+    local ok, err = save_zone_to_maps_file(zoneId, zoneData, get_zone_name(zoneId))
+    if ok then
+        state.save.error = ''
+        state.save.savedAt = os.clock()
+        return true
+    end
+
+    state.save.error = err or 'Failed to save data/maps.lua.'
+    state.save.savedAt = 0
+    return false
 end
 
 local function reset_edit_state(state, floorData)
@@ -238,54 +480,12 @@ local function ensure_selection(state, zoneId, zoneData)
     end
 end
 
-local function json_escape(value)
-    return tostring(value)
-        :gsub('\\', '\\\\')
-        :gsub('"', '\\"')
-        :gsub('\n', '\\n')
-        :gsub('\r', '\\r')
-        :gsub('\t', '\\t')
-end
-
-local function format_number(value)
+format_number = function (value)
     local num = tonumber(value) or 0
     if num == math.floor(num) then
         return tostring(num)
     end
     return string.format('%.6g', num)
-end
-
-local function build_json_entry(floorId, data)
-    local subZone = data.subZoneName or ''
-    return string.format(
-        '[%d] = {\n' ..
-        '  scalingX = %s,\n' ..
-        '  offsetX = %s,\n' ..
-        '  scalingY = %s,\n' ..
-        '  offsetY = %s,\n' ..
-        '  minX = %s,\n' ..
-        '  minY = %s,\n' ..
-        '  minZ = %s,\n' ..
-        '  maxX = %s,\n' ..
-        '  maxY = %s,\n' ..
-        '  maxZ = %s,\n' ..
-        '  referenceSize = %s,\n' ..
-        '  subZoneName = \'%s\'\n' ..
-        '}',
-        floorId,
-        format_number(data.scalingX),
-        format_number(data.offsetX),
-        format_number(data.scalingY),
-        format_number(data.offsetY),
-        format_number(data.minX),
-        format_number(data.minY),
-        format_number(data.minZ),
-        format_number(data.maxX),
-        format_number(data.maxY),
-        format_number(data.maxZ),
-        format_number(data.referenceSize),
-        json_escape(subZone)
-    )
 end
 
 local function calc_input_width(label)
@@ -366,10 +566,71 @@ function map_data_editor.draw_window()
     local zoneId = get_current_zone_id()
     local zoneData = map.get_custom_map_zone_data(zoneId)
 
-    if not zoneData then
+    if not zoneData or next(zoneData) == nil then
         imgui.Text('No custom floors for this zone.')
-        imgui.End()
-        return
+        imgui.Spacing()
+
+        if imgui.Button(ICON_FA_SQUARE_PLUS .. ' Initialize zone entry', { -1, 0 }) then
+            local floorId = 0
+            local datEntry = nil
+            if map.current_map_data and map.current_map_data.entry then
+                floorId = map.current_map_data.entry.FloorId or 0
+                datEntry = map.find_entry_by_floor(zoneId, floorId)
+            else
+                datEntry = map.find_entry_by_floor(zoneId, floorId)
+            end
+
+            local zoneName = get_zone_name(zoneId)
+            local floorName = zoneName
+            if floorName == '' then
+                floorName = string.format('Zone %d', zoneId)
+            end
+
+            local newZoneData = {
+                [floorId] = build_floor_data_from_dat_entry(datEntry, floorName)
+            }
+
+            zoneData = map.initialize_custom_map_zone_data(zoneId, newZoneData)
+            state.selectedZoneId = zoneId
+            state.selectedFloorId = floorId
+            reset_edit_state(state, zoneData[floorId])
+            state.initializeZone.error = ''
+            state.initializeZone.savedAt = os.clock()
+            state.save.error = ''
+            state.save.savedAt = 0
+        end
+
+        if state.initializeZone.error ~= '' then
+            imgui.TextColored({ 1.0, 0.4, 0.4, 1.0 }, state.initializeZone.error)
+        end
+
+        if zoneData and next(zoneData) == nil then
+            imgui.Spacing()
+            if imgui.Button(ICON_FA_FLOPPY_DISK .. ' Save', { -1, 0 }) then
+                save_current_zone(state, zoneId, zoneData)
+            end
+
+            if state.save.error ~= '' then
+                imgui.TextColored({ 1.0, 0.4, 0.4, 1.0 }, state.save.error)
+            elseif state.save.savedAt > 0 and (os.clock() - state.save.savedAt) < 2.0 then
+                imgui.Text(ICON_FA_CHECK .. ' Saved data/maps.lua.')
+            end
+        end
+
+        if zoneData and next(zoneData) ~= nil then
+            -- Continue into the editor immediately after creating the first floor.
+        else
+            imgui.End()
+            return
+        end
+    end
+
+    if zoneData and state.initializeZone.error ~= '' then
+        state.initializeZone.error = ''
+    end
+
+    if zoneData and not (state.initializeZone.savedAt > 0 and (os.clock() - state.initializeZone.savedAt) < 2.0) then
+        state.initializeZone.savedAt = 0
     end
 
     ensure_selection(state, zoneId, zoneData)
@@ -442,7 +703,15 @@ function map_data_editor.draw_window()
         imgui.Separator()
         imgui.InputInt('Floor Id', state.addFloor.id, 1, 10, ImGuiInputTextFlags_CharsDecimal)
         imgui.InputText('Sub Zone Name', state.addFloor.subZoneName, 64)
+        local canCopyFromSelected = state.selectedFloorId ~= nil and zoneData[state.selectedFloorId] ~= nil
+        if not canCopyFromSelected then
+            state.addFloor.copyFromSelected[1] = false
+            imgui.BeginDisabled()
+        end
         imgui.Checkbox('Copy from selected floor', state.addFloor.copyFromSelected)
+        if not canCopyFromSelected then
+            imgui.EndDisabled()
+        end
 
         local newId = tonumber(state.addFloor.id[1])
         local error = ''
@@ -562,9 +831,10 @@ function map_data_editor.draw_window()
     imgui.EndChild()
 
     if imgui.Button(ICON_FA_SQUARE_PLUS .. ' Add floor', { listWidth, 0 }) then
+        local canCopyFromSelected = state.selectedFloorId ~= nil and zoneData[state.selectedFloorId] ~= nil
         state.addFloor.id[1] = get_next_floor_id(zoneData)
         state.addFloor.subZoneName[1] = ''
-        state.addFloor.copyFromSelected[1] = true
+        state.addFloor.copyFromSelected[1] = canCopyFromSelected
         state.addFloor.error = ''
         imgui.OpenPopup('Add custom floor')
     end
@@ -581,26 +851,8 @@ function map_data_editor.draw_window()
         imgui.EndDisabled()
     end
 
-    if imgui.Button(ICON_FA_CLIPBOARD .. ' Copy JSON', { listWidth, 0 }) then
-        local json = '[' .. zoneId .. '] = {\n'
-        local sortedFloors = get_sorted_floors(zoneData)
-        for i, floorId in ipairs(sortedFloors) do
-            local floorData = zoneData[floorId]
-            local entry = build_json_entry(floorId, floorData)
-            -- Indent each line of the entry
-            entry = '    ' .. entry:gsub('\n', '\n    ')
-            json = json .. entry
-            if i < #sortedFloors then
-                json = json .. ','
-            end
-            json = json .. '\n'
-        end
-        json = json .. '},'
-        if ashita.misc.set_clipboard(json) then
-            state.lastCopiedAt = os.clock()
-        else
-            state.lastCopiedAt = 0
-        end
+    if imgui.Button(ICON_FA_FLOPPY_DISK .. ' Save', { listWidth, 0 }) then
+        save_current_zone(state, zoneId, zoneData)
     end
 
     imgui.EndGroup()
@@ -833,18 +1085,12 @@ function map_data_editor.draw_window()
                 draw_int_input(state, floorData, 'referenceSize', 'Reference size', 1, 16)
                 draw_text_input(state, floorData, 'subZoneName', 'Sub-zone name', 64)
 
-                imgui.Spacing()
-                if imgui.Button(ICON_FA_CLIPBOARD .. ' Copy JSON entry', { -1, 0 }) then
-                    local json = build_json_entry(state.selectedFloorId, floorData)
-                    if ashita.misc.set_clipboard(json) then
-                        state.lastCopiedAt = os.clock()
-                    else
-                        state.lastCopiedAt = 0
-                    end
-                end
-
-                if state.lastCopiedAt > 0 and (os.clock() - state.lastCopiedAt) < 2.0 then
-                    imgui.Text(ICON_FA_CHECK .. ' Copied to clipboard.')
+                if state.save.error ~= '' then
+                    imgui.TextColored({ 1.0, 0.4, 0.4, 1.0 }, state.save.error)
+                elseif state.save.savedAt > 0 and (os.clock() - state.save.savedAt) < 2.0 then
+                    imgui.Text(ICON_FA_CHECK .. ' Saved data/maps.lua.')
+                elseif state.initializeZone.savedAt > 0 and (os.clock() - state.initializeZone.savedAt) < 2.0 then
+                    imgui.Text(ICON_FA_CHECK .. ' Zone entry initialized.')
                 end
             end
         end
