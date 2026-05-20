@@ -48,7 +48,6 @@ boussole = {
     minimapResetZoom = false,
     zoning = false,
     preZoneVisible = false,
-    preZoneMinimapVisible = false,
     mapDataEditor = {
         visible = { false },
         selectedZoneId = 0,
@@ -179,7 +178,10 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
     end
 
     ui.update()
-    minimap.update()
+
+    if not boussole.zoning then
+        minimap.update()
+    end
 end)
 
 ashita.events.register('d3d_beginscene', 'd3d_beginscene_cb', function ()
@@ -196,9 +198,8 @@ end)
 ashita.events.register('packet_in', 'packet_in_cb', function (e)
     if (e.id == 0x000A) then
         if boussole.zoning then
-            boussole.visible[1]               = boussole.preZoneVisible
-            boussole.config.minimapVisible[1] = boussole.preZoneMinimapVisible
-            boussole.zoning                   = false
+            boussole.visible[1] = boussole.preZoneVisible
+            boussole.zoning     = false
         end
 
         if (struct.unpack('b', e.data_modified, 0x80 + 0x01) == 1) then
@@ -256,11 +257,9 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
     end
 
     if e.id == 0x000B then
-        boussole.preZoneVisible           = boussole.visible[1]
-        boussole.preZoneMinimapVisible    = boussole.config.minimapVisible[1]
-        boussole.visible[1]               = false
-        boussole.config.minimapVisible[1] = false
-        boussole.zoning                   = true
+        boussole.preZoneVisible = boussole.visible[1]
+        boussole.visible[1]     = false
+        boussole.zoning         = true
     end
 
     -- Handle entity update packets for tracker
