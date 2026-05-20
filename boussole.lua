@@ -152,7 +152,17 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
         local x, y, z = map.get_player_position()
         if x ~= nil and y ~= nil and z ~= nil then
             local current_floor_id = map.get_floor_id(x, y, z)
-            if current_floor_id and boussole.last_floor_id and current_floor_id ~= boussole.last_floor_id then
+            local loadedEntry = map.current_map_data and map.current_map_data.entry
+
+            if current_floor_id and loadedEntry and loadedEntry.ZoneId == 0 then
+                local mapData, err = map.load_current_map_dat()
+                if mapData then
+                    texture.load_and_set(ui, mapData, chat, addon.name)
+                    boussole.manualZoneId[1] = mapData.entry.ZoneId
+                    boussole.manualFloorId[1] = mapData.entry.FloorId
+                    boussole.last_floor_id = mapData.entry.FloorId
+                end
+            elseif current_floor_id and boussole.last_floor_id and current_floor_id ~= boussole.last_floor_id then
                 -- Floor changed, reload map
                 boussole.last_floor_id = current_floor_id
                 local mapData, err = map.load_current_map_dat()
