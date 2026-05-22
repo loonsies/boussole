@@ -47,6 +47,14 @@ local function load_zone_zoom(zoneKey)
     return nil
 end
 
+local function get_default_zoom_multiplier()
+    if not boussole.config.defaultMinimapZoom then
+        return 1.0
+    end
+
+    return math.max(1.0, math.min(10.0, boussole.config.defaultMinimapZoom[1] or 1.0))
+end
+
 -- Save current zoom for a zone key
 local function save_zone_zoom(zoneKey)
     if not zoneKey then return end
@@ -279,7 +287,7 @@ function minimap.update()
 
         -- First-time (or after zone change with no saved data) zoom initialisation
         if minimap.map_zoom < 0 then
-            minimap.map_zoom = minZoom
+            minimap.map_zoom = math.min(minZoom * get_default_zoom_multiplier(), 5.0)
         end
 
         -- Clamp zoom to valid range

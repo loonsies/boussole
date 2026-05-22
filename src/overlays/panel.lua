@@ -671,6 +671,27 @@ local function draw_map_tab(currentZone, currentFloor, selectedZoneName, filtere
 end
 
 local function draw_display_tab()
+    imgui.SeparatorText(ICON_FA_GEARS .. ' Main options')
+    -- Panel options
+    imgui.PushItemWidth(100)
+    if imgui.InputInt('Panel width', boussole.config.panelWidth, 10, 50) then
+        boussole.config.panelWidth[1] = math.max(100, math.min(400, boussole.config.panelWidth[1]))
+        settings.save()
+    end
+    if imgui.InputFloat('Default zoom', boussole.config.defaultMapZoom, 0.1, 0.5, '%.2f') then
+        boussole.config.defaultMapZoom[1] = math.max(1.0, math.min(5.0, boussole.config.defaultMapZoom[1]))
+        settings.save()
+    end
+    imgui.ShowHelp('Used for maps without a saved zoom level. 1.0x fits the whole map; 2.0x starts twice as zoomed in.', true)
+    imgui.PopItemWidth()
+
+    imgui.PushItemWidth(100)
+    if imgui.InputInt('Info font size##InfoPanel', boussole.config.infoPanelFontSize, 1, 2) then
+        boussole.config.infoPanelFontSize[1] = math.max(8, math.min(24, boussole.config.infoPanelFontSize[1]))
+        settings.save()
+    end
+    imgui.PopItemWidth()
+
     -- Display Options
     imgui.SeparatorText(ICON_FA_FILTER .. ' Display options')
 
@@ -701,15 +722,6 @@ local function draw_display_tab()
 
     imgui.SeparatorText(ICON_FA_PALETTE .. ' UI appearance')
 
-    imgui.PushItemWidth(100)
-    if imgui.InputInt('Panel width', boussole.config.panelWidth, 10, 50) then
-        boussole.config.panelWidth[1] = math.max(100, math.min(400, boussole.config.panelWidth[1]))
-        settings.save()
-    end
-    imgui.PopItemWidth()
-    imgui.Spacing()
-
-    imgui.Separator()
     imgui.Text('Icon sizes')
     imgui.PushItemWidth(100)
     if imgui.InputInt('Homepoint##IconSize', boussole.config.iconSizeHomepoint, 1, 5) then
@@ -758,17 +770,6 @@ local function draw_display_tab()
     if imgui.ColorEdit4('Toggle btn##Color', boussole.config.colorToggleBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
     if imgui.ColorEdit4('Controls btn##Color', boussole.config.colorControlsBtn, ImGuiColorEditFlags_NoInputs) then settings.save() end
     if imgui.ColorEdit4('Controls btn active##Color', boussole.config.colorControlsBtnActive, ImGuiColorEditFlags_NoInputs) then settings.save() end
-    imgui.Spacing()
-
-    -- Info panel
-    imgui.Separator()
-    imgui.Text('Info panel')
-    imgui.PushItemWidth(100)
-    if imgui.InputInt('Font size##InfoPanel', boussole.config.infoPanelFontSize, 1, 2) then
-        boussole.config.infoPanelFontSize[1] = math.max(8, math.min(24, boussole.config.infoPanelFontSize[1]))
-        settings.save()
-    end
-    imgui.PopItemWidth()
     imgui.Spacing()
 end
 
@@ -1045,6 +1046,12 @@ local function draw_minimap_tab()
         boussole.config.minimapZoomStep[1] = math.max(0.01, math.min(1.0, boussole.config.minimapZoomStep[1]))
         settings.save()
     end
+
+    if imgui.InputFloat('Default zoom', boussole.config.defaultMinimapZoom, 0.1, 0.5, '%.2f') then
+        boussole.config.defaultMinimapZoom[1] = math.max(1.0, math.min(10.0, boussole.config.defaultMinimapZoom[1]))
+        settings.save()
+    end
+    imgui.ShowHelp('Used for minimaps without a saved zoom level. 1.00x fits the whole minimap; 2.00x starts twice as zoomed in.', true)
 
     if imgui.InputFloat('Corner radius', boussole.config.minimapCornerRadius, 1.0, 5.0, '%.0f') then
         boussole.config.minimapCornerRadius[1] = math.max(0.0, math.min(50.0, boussole.config.minimapCornerRadius[1]))

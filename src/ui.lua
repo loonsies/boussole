@@ -71,6 +71,14 @@ function ui.restore_view_state()
     ui.last_saved_zoom = ui.map_zoom
 end
 
+function ui.get_default_zoom_multiplier()
+    if not boussole.config.defaultMapZoom then
+        return 1.0
+    end
+
+    return math.max(1.0, math.min(5.0, boussole.config.defaultMapZoom[1] or 1.0))
+end
+
 -- Save current map view state to config for current zone+floor
 function ui.save_view_state()
     local viewKey = ui.get_view_key()
@@ -349,8 +357,14 @@ function ui.drawUI()
 
             -- If zoom is -1 (not initialized), set it to minimum zoom for full map view
             if ui.map_zoom < 0 then
-                ui.map_zoom = minZoom
-                ui.last_saved_zoom = minZoom
+                ui.map_zoom = math.min(minZoom * ui.get_default_zoom_multiplier(), 5.0)
+                if not ui.center_on_player(map.current_map_data, availWidth, availHeight, ui.map_texture.width, ui.map_texture.height) then
+                    ui.map_offset.x = (availWidth - ui.map_texture.width * ui.map_zoom) / 2
+                    ui.map_offset.y = (availHeight - ui.map_texture.height * ui.map_zoom) / 2
+                end
+                ui.last_saved_zoom = ui.map_zoom
+                ui.last_saved_offset.x = ui.map_offset.x
+                ui.last_saved_offset.y = ui.map_offset.y
             else
                 ui.map_zoom = math.max(ui.map_zoom, minZoom)
             end
