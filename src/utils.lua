@@ -1,5 +1,6 @@
 local utils = {}
 
+local imgui = require('imgui')
 local regionZones = require('data.regionZones')
 local regions = require('data.regions')
 
@@ -59,6 +60,105 @@ function utils.mul_alpha(color, alpha)
     local a = bit.rshift(bit.band(color, 0xFF000000), 24)
     local rgb = bit.band(color, 0x00FFFFFF)
     return bit.bor(bit.lshift(math.floor(a * alpha), 24), rgb)
+end
+
+function utils.draw_label(drawList, label, screenX, screenY, markerSize, textColor, alpha)
+    alpha = alpha or 1.0
+
+    local textWidth, textHeight = imgui.CalcTextSize(label)
+    local labelX = screenX - textWidth / 2
+    local labelY = screenY - markerSize - textHeight - 4
+    local padding = 4
+    local bgColor = utils.mul_alpha(utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 }), alpha)
+
+    drawList:AddRectFilled(
+        { labelX - padding, labelY - padding },
+        { labelX + textWidth + padding, labelY + textHeight + padding },
+        bgColor,
+        3.0
+    )
+    drawList:AddText({ labelX, labelY }, textColor, label)
+end
+
+function utils.draw_circle_marker(drawList, screenX, screenY, radius, color, outlineColor, outlineThickness)
+    drawList:AddCircleFilled({ screenX, screenY }, radius, color)
+
+    if outlineColor ~= nil and outlineThickness ~= 0 then
+        drawList:AddCircle({ screenX, screenY }, radius, outlineColor, 0, outlineThickness or 2.0)
+    end
+end
+
+function utils.draw_diamond_marker(drawList, screenX, screenY, radius, color, outlineColor, xScale)
+    local size = radius
+    xScale = xScale or 0.7
+    local top = { screenX, screenY - size }
+    local right = { screenX + size * xScale, screenY }
+    local bottom = { screenX, screenY + size }
+    local left = { screenX - size * xScale, screenY }
+
+    drawList:AddTriangleFilled(top, left, right, color)
+    drawList:AddTriangleFilled(bottom, left, right, color)
+
+    if outlineColor ~= nil then
+        drawList:AddLine(top, left, outlineColor, 1.0)
+        drawList:AddLine(left, bottom, outlineColor, 1.0)
+        drawList:AddLine(bottom, right, outlineColor, 1.0)
+        drawList:AddLine(right, top, outlineColor, 1.0)
+    end
+end
+
+function utils.draw_square_marker(drawList, screenX, screenY, radius, color, outlineColor, outlineThickness)
+    local size = radius * 0.8
+
+    drawList:AddRectFilled(
+        { screenX - size, screenY - size },
+        { screenX + size, screenY + size },
+        color
+    )
+
+    if outlineColor ~= nil and outlineThickness ~= 0 then
+        drawList:AddRect(
+            { screenX - size, screenY - size },
+            { screenX + size, screenY + size },
+            outlineColor,
+            0.0,
+            0,
+            outlineThickness or 1.5
+        )
+    end
+end
+
+function utils.draw_rotated_texture(drawList, texturePtr, centerX, centerY, size, angle, color)
+    local halfSize = size / 2
+    local cos_angle = math.cos(angle)
+    local sin_angle = math.sin(angle)
+    local corners = {
+        { x = -halfSize, y = -halfSize },
+        { x = halfSize, y = -halfSize },
+        { x = halfSize, y = halfSize },
+        { x = -halfSize, y = halfSize },
+    }
+    local rotated = {}
+
+    for i, corner in ipairs(corners) do
+        rotated[i] = {
+            centerX + corner.x * cos_angle - corner.y * sin_angle,
+            centerY + corner.x * sin_angle + corner.y * cos_angle,
+        }
+    end
+
+    drawList:AddImageQuad(
+        texturePtr,
+        rotated[1],
+        rotated[2],
+        rotated[3],
+        rotated[4],
+        { 0, 0 },
+        { 1, 0 },
+        { 1, 1 },
+        { 0, 1 },
+        color
+    )
 end
 
 return utils

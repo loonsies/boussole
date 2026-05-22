@@ -1,5 +1,5 @@
 addon.name = 'boussole'
-addon.version = "1.09"
+addon.version = '1.09'
 addon.author = 'looney'
 addon.desc = 'Replacement for in-game map with additional features.'
 addon.link = 'https://github.com/loonsies/boussole'
@@ -114,11 +114,11 @@ ashita.events.register('load', 'load_cb', function ()
 
             boussole.last_sub_zone_id = currentSubZone or 0
 
-            -- Load zone entities for tracker
-            if boussole.config.enableTracker[1] and currentZone and currentZone > 0 then
+            -- Load zone entities for observed NPCs/mobs and tracker search data
+            if currentZone and currentZone > 0 then
                 tracker.load_zone_entities(currentZone, currentSubZone)
 
-                if boussole.config.lastLoadedTrackerProfile and boussole.config.lastLoadedTrackerProfile ~= '' then
+                if boussole.config.enableTracker[1] and boussole.config.lastLoadedTrackerProfile and boussole.config.lastLoadedTrackerProfile ~= '' then
                     tracker.load_profile(boussole.config.lastLoadedTrackerProfile)
                     boussole.trackedSearchResults = nil
                 end
@@ -140,8 +140,8 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
     -- Process tracker packet queue
     if boussole.config.enableTracker[1] then
         tracker.process_packet_queue()
-        tracker.process_timeouts()
     end
+    tracker.process_timeouts()
 
     -- Check for floor changes every 1 second
     local current_time = os.clock()
@@ -237,14 +237,17 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                     end
                 end
 
-                -- Load zone entities for tracker using proper subzone
-                if boussole.config.enableTracker[1] and newZone and newZone > 0 then
+                -- Load zone entities for observed NPCs/mobs and tracker search data
+                if newZone and newZone > 0 then
                     tracker.load_zone_entities(newZone, newSubZone)
-                    boussole.trackerSearchResults = {}
-                    boussole.trackerSearch = { '' }
 
-                    -- Reload the last selected profile if one was loaded
-                    if boussole.config.lastLoadedTrackerProfile and boussole.config.lastLoadedTrackerProfile ~= '' then
+                    if boussole.config.enableTracker[1] then
+                        boussole.trackerSearchResults = {}
+                        boussole.trackerSearch = { '' }
+                    end
+
+                    -- Reload the last selected profile if one was loaded and tracker is enabled
+                    if boussole.config.enableTracker[1] and boussole.config.lastLoadedTrackerProfile and boussole.config.lastLoadedTrackerProfile ~= '' then
                         tracker.load_profile(boussole.config.lastLoadedTrackerProfile)
                     end
                 end
@@ -262,28 +265,26 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
         boussole.zoning         = true
     end
 
-    -- Handle entity update packets for tracker
-    if boussole.config.enableTracker[1] then
-        if e.id == 0x00E then
-            tracker.handle_entity_update(e)
+    -- Handle entity update packets for observed NPCs/mobs and tracker positions
+    if e.id == 0x00E then
+        tracker.handle_entity_update(e)
 
-            -- Cache position data if present
-            if bit.band(struct.unpack('B', e.data, 0x0A + 1), 0x01) == 0x01 then
-                local index = struct.unpack('H', e.data, 0x08 + 1)
-                local x = struct.unpack('f', e.data, 0x0C + 1)
-                local y = struct.unpack('f', e.data, 0x14 + 1)
-                local z = struct.unpack('f', e.data, 0x10 + 1)
-                tracker.cache_position(index, x, y, z)
-            end
-        end
-
-        -- Handle position packet (0xF5)
-        if e.id == 0xF5 then
-            local index = struct.unpack('H', e.data, 0x12 + 1)
-            local x = struct.unpack('f', e.data, 0x04 + 1)
-            local y = struct.unpack('f', e.data, 0x0C + 1)
-            local z = struct.unpack('f', e.data, 0x08 + 1)
+        -- Cache position data if present
+        if bit.band(struct.unpack('B', e.data, 0x0A + 1), 0x01) == 0x01 then
+            local index = struct.unpack('H', e.data, 0x08 + 1)
+            local x = struct.unpack('f', e.data, 0x0C + 1)
+            local y = struct.unpack('f', e.data, 0x14 + 1)
+            local z = struct.unpack('f', e.data, 0x10 + 1)
             tracker.cache_position(index, x, y, z)
         end
+    end
+
+    -- Handle position packet (0xF5)
+    if e.id == 0xF5 then
+        local index = struct.unpack('H', e.data, 0x12 + 1)
+        local x = struct.unpack('f', e.data, 0x04 + 1)
+        local y = struct.unpack('f', e.data, 0x0C + 1)
+        local z = struct.unpack('f', e.data, 0x08 + 1)
+        tracker.cache_position(index, x, y, z)
     end
 end)

@@ -6,6 +6,8 @@ local chat = require('chat')
 local trackedEntities = {} -- { [id] = { id, name, alias, color, alarm, draw, widescan, lastPacket } }
 local zoneEntities = {}    -- { [id] = { id, name, index } }
 local activeEntities = {}  -- { [id] = { x, y, z, lastSeen } }
+local mobEntities = {}     -- { [id] = { id, zoneId, name, alias, draw, index } }
+local npcEntities = {}     -- { [id] = { id, zoneId, name, alias, draw, index } }
 local packetQueue = {}
 local packetNextSend = 0
 local lastSend = 0
@@ -157,6 +159,14 @@ function tracker.get_active_entities()
     return activeEntities
 end
 
+function tracker.get_mob_entities()
+    return mobEntities
+end
+
+function tracker.get_npc_entities()
+    return npcEntities
+end
+
 -- Get location cache
 function tracker.get_location_cache()
     return locationCache
@@ -188,6 +198,9 @@ function tracker.add_entity(id, name, alias)
         lastPacket = 0,
         timeout = 0,
     }
+
+    mobEntities[id] = nil
+    npcEntities[id] = nil
 
     return true
 end
@@ -225,21 +238,24 @@ end
 
 -- Clear all tracked entities
 function tracker.clear_all()
+    for id in pairs(trackedEntities) do
+        activeEntities[id] = nil
+    end
     trackedEntities = {}
-    activeEntities = {}
 
     if #packetQueue > 0 then
         print(chat.header('boussole'):append(chat.message(string.format('%d packets removed from queue', #packetQueue))))
     end
 
     packetQueue = {}
-    locationCache = {}
     boussole.trackedSearchResults = nil
 end
 
 -- Clear zone-specific data on zone change
 function tracker.clear_zone_data()
     activeEntities = {}
+    mobEntities = {}
+    npcEntities = {}
     locationCache = {}
     boussole.trackerSelections = {}
     boussole.trackedSearchResults = nil
@@ -310,47 +326,130 @@ function tracker.is_sending_packets()
     return #packetQueue > 0
 end
 
--- Handle incoming entity update packet (0x00E)
-function tracker.handle_entity_update(e)
-    local id = struct.unpack('L', e.data, 0x04 + 1)
+local function get_observed_entity_kind(index)
+    local spawnFlags = AshitaCore:GetMemoryManager():GetEntity():GetSpawnFlags(index)
+    if bit.band(spawnFlags, 0x10) ~= 0 then
+        return 'mob'
+    end
+    if bit.band(spawnFlags, 0x0002) == 0x0002 and bit.band(spawnFlags, 0x0001) == 0 then
+        return 'npc'
+    end
+    return nil
+end
 
-    if not trackedEntities[id] then
+local function normalize_observed_name(name)
+    if name ~= nil then
+        name = name:trim()
+    end
+
+    if name == nil or name == '' then
+        return '[Nameless]'
+    end
+
+    if name:sub(1, 10) == 'Home Point' then
+        return nil
+    end
+
+    return name
+end
+
+local function update_observed_entity(id, index, kind)
+    if id == 0 or (trackedEntities[id] == nil and kind == nil) then
         return
     end
 
+    local trackerEnabled = boussole.config.enableTracker and boussole.config.enableTracker[1]
+    if trackerEnabled and trackedEntities[id] then
+        mobEntities[id] = nil
+        npcEntities[id] = nil
+        return
+    end
+
+    local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
+    local zoneEntity = zoneEntities[id]
+    local entity = GetEntity(index)
+    local name = normalize_observed_name((zoneEntity and zoneEntity.name) or (entity and entity.Name))
+    if name == nil then
+        mobEntities[id] = nil
+        npcEntities[id] = nil
+        activeEntities[id] = nil
+        return
+    end
+
+    local observed = {
+        id = id,
+        zoneId = zone,
+        name = name,
+        alias = name,
+        draw = true,
+        index = index,
+    }
+
+    if kind == 'mob' then
+        mobEntities[id] = observed
+        npcEntities[id] = nil
+    elseif kind == 'npc' then
+        npcEntities[id] = observed
+        mobEntities[id] = nil
+    end
+end
+
+-- Handle incoming entity update packet (0x00E)
+function tracker.handle_entity_update(e)
+    local id = struct.unpack('L', e.data, 0x04 + 1)
+    local index = struct.unpack('H', e.data, 0x08 + 1)
+    local kind = get_observed_entity_kind(index)
+
     local mask = struct.unpack('B', e.data, 0x0A + 1)
+
+    if not trackedEntities[id] and kind == nil then
+        return
+    end
 
     -- Check if entity is hidden
     if bit.band(mask, 0x07) ~= 0 then
         local flags1 = struct.unpack('L', e.data, 0x20 + 1)
         if bit.band(flags1, 0x02) == 2 then
             activeEntities[id] = nil
+            mobEntities[id] = nil
+            npcEntities[id] = nil
             return
         end
     else
         -- Not dealing with these packets
         if bit.band(mask, 0x20) == 0x20 then
             activeEntities[id] = nil
+            mobEntities[id] = nil
+            npcEntities[id] = nil
         end
         return
     end
 
     -- Check HP
-    if bit.band(mask, 0x04) == 0x04 then
+    if kind == 'mob' and bit.band(mask, 0x04) == 0x04 then
         local hp = struct.unpack('B', e.data, 0x1E + 1)
         if hp == 0 then
             activeEntities[id] = nil
+            mobEntities[id] = nil
             return
         end
-    elseif AshitaCore:GetMemoryManager():GetEntity():GetHPPercent(bit.band(id, 0xFFF)) == 0 then
+    elseif kind == 'mob' and AshitaCore:GetMemoryManager():GetEntity():GetHPPercent(bit.band(id, 0xFFF)) == 0 then
         -- Fallback HP check using memory manager
         activeEntities[id] = nil
+        mobEntities[id] = nil
         return
     end
 
     -- Get position
-    local index = struct.unpack('H', e.data, 0x08 + 1)
     local position = locationCache[index]
+
+    if position == nil and bit.band(mask, 0x01) == 0x01 then
+        position = {
+            x = struct.unpack('f', e.data, 0x0C + 1),
+            y = struct.unpack('f', e.data, 0x14 + 1),
+            z = struct.unpack('f', e.data, 0x10 + 1),
+        }
+    end
 
     if position == nil then
         local enemyEntity = GetEntity(index)
@@ -372,14 +471,16 @@ function tracker.handle_entity_update(e)
             index = index
         }
 
-        -- Trigger alarm if enabled
+        update_observed_entity(id, index, kind)
+
+        -- Trigger tracker actions only when the tracker feature is enabled
         local entity = trackedEntities[id]
-        if entity.alarm then
+        local trackerEnabled = boussole.config.enableTracker and boussole.config.enableTracker[1]
+        if trackerEnabled and entity and entity.alarm then
             -- Play sound (would need to implement sound playing)
         end
 
-        -- Auto widescan if enabled
-        if entity.widescan then
+        if trackerEnabled and entity and entity.widescan then
             tracker.send_widescan(id)
         end
     end
@@ -399,6 +500,26 @@ function tracker.process_timeouts()
             local timeSinceLastSeen = currentTime - activeEntities[id].lastSeen
             if timeSinceLastSeen >= entity.timeout then
                 activeEntities[id] = nil
+            end
+        end
+    end
+
+    local mobTimeout = boussole.config.mobEntityTimeout and boussole.config.mobEntityTimeout[1] or 30
+    if mobTimeout > 0 then
+        for id, entity in pairs(mobEntities) do
+            if activeEntities[id] == nil or currentTime - activeEntities[id].lastSeen >= mobTimeout then
+                activeEntities[id] = nil
+                mobEntities[id] = nil
+            end
+        end
+    end
+
+    local npcTimeout = boussole.config.npcEntityTimeout and boussole.config.npcEntityTimeout[1] or 30
+    if npcTimeout > 0 then
+        for id, entity in pairs(npcEntities) do
+            if activeEntities[id] == nil or currentTime - activeEntities[id].lastSeen >= npcTimeout then
+                activeEntities[id] = nil
+                npcEntities[id] = nil
             end
         end
     end

@@ -11,6 +11,8 @@ local party_overlay = require('src.overlays.party')
 local alliance_overlay = require('src.overlays.alliance')
 local warp_overlay = require('src.overlays.warp')
 local custom_points = require('src.overlays.custom_points')
+local npc_entities = require('src.overlays.npc_entities')
+local mob_entities = require('src.overlays.mob_entities')
 local tracked_entities = require('src.overlays.tracked_entities')
 local tooltip = require('src.overlays.tooltip')
 local controls = require('src.overlays.controls')
@@ -28,6 +30,7 @@ ui.map_zoom = 0.0
 ui.is_dragging = false
 ui.drag_start = { x = 0, y = 0 }
 ui.drag_moved = false
+ui.last_right_click = { time = 0, x = 0, y = 0 }
 ui.window_bounds = nil
 ui.window_focused = false
 ui.current_view_key = nil
@@ -271,56 +274,68 @@ function ui.drawUI()
             else
                 -- Right mouse button released
                 if ui.is_dragging and not ui.drag_moved and isMapHovered and not boussole.panelHovered and map.current_map_data and map.current_map_data.entry then
-                    -- Open custom point popup if it wasn't a drag action
                     local mousePosX, mousePosY = imgui.GetMousePos()
+                    local now = os.clock()
+                    local clickDx = mousePosX - ui.last_right_click.x
+                    local clickDy = mousePosY - ui.last_right_click.y
+                    local isDoubleRightClick = (now - ui.last_right_click.time) <= 0.35 and
+                        math.sqrt(clickDx * clickDx + clickDy * clickDy) <= 8.0
 
-                    -- Check if clicking on an existing point
-                    local clickedPoint = custom_points.find_point_at_position(
-                        map.current_map_data.entry.ZoneId,
-                        map.current_map_data.entry.FloorId,
-                        mousePosX, mousePosY,
-                        map.current_map_data,
-                        windowPosX, windowPosY,
-                        contentMinX, contentMinY,
-                        ui.map_offset.x, ui.map_offset.y,
-                        ui.map_zoom,
-                        ui.map_texture.width
-                    )
+                    if isDoubleRightClick then
+                        ui.last_right_click.time = 0
 
-                    if clickedPoint then
-                        -- Edit existing point
-                        custom_points.open_edit_popup(
+                        -- Check if clicking on an existing point
+                        local clickedPoint = custom_points.find_point_at_position(
                             map.current_map_data.entry.ZoneId,
                             map.current_map_data.entry.FloorId,
-                            clickedPoint.id,
-                            clickedPoint.point
+                            mousePosX, mousePosY,
+                            map.current_map_data,
+                            windowPosX, windowPosY,
+                            contentMinX, contentMinY,
+                            ui.map_offset.x, ui.map_offset.y,
+                            ui.map_zoom,
+                            ui.map_texture.width
                         )
-                    else
-                        -- Add new point - convert mouse to map coordinates
-                        local texPosX = windowPosX + contentMinX + ui.map_offset.x
-                        local texPosY = windowPosY + contentMinY + ui.map_offset.y
-                        local texMouseX = (mousePosX - texPosX) / ui.map_zoom
-                        local texMouseY = (mousePosY - texPosY) / ui.map_zoom
 
-                        -- Check if click is within texture bounds
-                        if texMouseX >= 0 and texMouseX <= ui.map_texture.width and
-                            texMouseY >= 0 and texMouseY <= ui.map_texture.height then
-                            -- Scale texture coordinates to map coordinate space
-                            local scale
-                            if map.current_map_data.entry._isCustomMap and map.current_map_data.entry._customData and map.current_map_data.entry._customData.referenceSize then
-                                scale = map.current_map_data.entry._customData.referenceSize / ui.map_texture.width
-                            else
-                                scale = 512.0 / ui.map_texture.width
-                            end
-                            local mapX = texMouseX * scale + map.current_map_data.entry.OffsetX
-                            local mapY = texMouseY * scale + map.current_map_data.entry.OffsetY
-
-                            custom_points.open_add_popup(
+                        if clickedPoint then
+                            -- Edit existing point
+                            custom_points.open_edit_popup(
                                 map.current_map_data.entry.ZoneId,
                                 map.current_map_data.entry.FloorId,
-                                mapX, mapY
+                                clickedPoint.id,
+                                clickedPoint.point
                             )
+                        else
+                            -- Add new point - convert mouse to map coordinates
+                            local texPosX = windowPosX + contentMinX + ui.map_offset.x
+                            local texPosY = windowPosY + contentMinY + ui.map_offset.y
+                            local texMouseX = (mousePosX - texPosX) / ui.map_zoom
+                            local texMouseY = (mousePosY - texPosY) / ui.map_zoom
+
+                            -- Check if click is within texture bounds
+                            if texMouseX >= 0 and texMouseX <= ui.map_texture.width and
+                                texMouseY >= 0 and texMouseY <= ui.map_texture.height then
+                                -- Scale texture coordinates to map coordinate space
+                                local scale
+                                if map.current_map_data.entry._isCustomMap and map.current_map_data.entry._customData and map.current_map_data.entry._customData.referenceSize then
+                                    scale = map.current_map_data.entry._customData.referenceSize / ui.map_texture.width
+                                else
+                                    scale = 512.0 / ui.map_texture.width
+                                end
+                                local mapX = texMouseX * scale + map.current_map_data.entry.OffsetX
+                                local mapY = texMouseY * scale + map.current_map_data.entry.OffsetY
+
+                                custom_points.open_add_popup(
+                                    map.current_map_data.entry.ZoneId,
+                                    map.current_map_data.entry.FloorId,
+                                    mapX, mapY
+                                )
+                            end
                         end
+                    else
+                        ui.last_right_click.time = now
+                        ui.last_right_click.x = mousePosX
+                        ui.last_right_click.y = mousePosY
                     end
                 end
                 ui.is_dragging = false
@@ -417,6 +432,16 @@ function ui.drawUI()
                     ui.map_zoom, ui.map_texture.width)
 
                 custom_points.draw(map.current_map_data, windowPosX, windowPosY,
+                    contentMinX, contentMinY,
+                    ui.map_offset.x, ui.map_offset.y,
+                    ui.map_zoom, ui.map_texture.width)
+
+                npc_entities.draw(boussole.config, map.current_map_data, windowPosX, windowPosY,
+                    contentMinX, contentMinY,
+                    ui.map_offset.x, ui.map_offset.y,
+                    ui.map_zoom, ui.map_texture.width)
+
+                mob_entities.draw(boussole.config, map.current_map_data, windowPosX, windowPosY,
                     contentMinX, contentMinY,
                     ui.map_offset.x, ui.map_offset.y,
                     ui.map_zoom, ui.map_texture.width)

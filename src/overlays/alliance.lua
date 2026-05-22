@@ -44,6 +44,7 @@ function alliance_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, c
     else
         showLabels = contextConfig.showLabels[1]
     end
+    showLabels = showLabels and (contextConfig.showAllianceLabels == nil or contextConfig.showAllianceLabels[1])
     if not mapData then return end
 
     if not contextConfig.showAlliance or not contextConfig.showAlliance[1] then return end
@@ -94,47 +95,12 @@ function alliance_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, c
                         local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
 
                         local heading = (entity.Heading or 0) + (math.pi / 2)
-                        local cos_angle = math.cos(heading)
-                        local sin_angle = math.sin(heading)
 
                         -- Draw label above alliance member if showLabels is enabled
                         if showLabels then
                             local memberName = entity.Name or ('Alliance ' .. i)
-                            local textWidth, textHeight = imgui.CalcTextSize(memberName)
-                            local labelX = screenX - textWidth / 2
-                            local labelY = screenY - cursorSize - textHeight - 4
-                            local padding = 4
-
-                            -- Draw background
-                            local bgColor = utils.mul_alpha(utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 }), contextAlpha)
-                            drawList:AddRectFilled(
-                                { labelX - padding, labelY - padding },
-                                { labelX + textWidth + padding, labelY + textHeight + padding },
-                                bgColor,
-                                3.0
-                            )
-
-                            -- Draw text with alliance color
                             local textColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorAlliance), contextAlpha)
-                            drawList:AddText({ labelX, labelY }, textColor, memberName)
-                        end
-
-                        local corners = {
-                            { x = -halfSize, y = -halfSize }, -- Top-left
-                            { x = halfSize,  y = -halfSize }, -- Top-right
-                            { x = halfSize,  y = halfSize },  -- Bottom-right
-                            { x = -halfSize, y = halfSize }   -- Bottom-left
-                        }
-
-                        local rotated_corners = {}
-                        for j, corner in ipairs(corners) do
-                            local rotated_x = corner.x * cos_angle - corner.y * sin_angle
-                            local rotated_y = corner.x * sin_angle + corner.y * cos_angle
-
-                            rotated_corners[j] = {
-                                screenX + rotated_x,
-                                screenY + rotated_y
-                            }
+                            utils.draw_label(drawList, memberName, screenX, screenY, cursorSize, textColor, contextAlpha)
                         end
 
                         local dx = mousePosX - screenX
@@ -151,18 +117,7 @@ function alliance_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, c
 
                         if texturePointer then
                             local color = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorAlliance), contextAlpha)
-                            drawList:AddImageQuad(
-                                texturePointer,
-                                rotated_corners[1],
-                                rotated_corners[2],
-                                rotated_corners[3],
-                                rotated_corners[4],
-                                { 0, 0 },
-                                { 1, 0 },
-                                { 1, 1 },
-                                { 0, 1 },
-                                color
-                            )
+                            utils.draw_rotated_texture(drawList, texturePointer, screenX, screenY, cursorSize, heading, color)
                         end
                     end
                 end

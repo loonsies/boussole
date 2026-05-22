@@ -46,6 +46,7 @@ function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, con
     else
         showLabels = contextConfig.showLabels[1]
     end
+    showLabels = showLabels and (contextConfig.showPlayerLabels == nil or contextConfig.showPlayerLabels[1])
     if not mapData then return end
 
     -- Check if player display is enabled
@@ -87,49 +88,12 @@ function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, con
     local cursorSize = contextConfig.iconSizePlayer[1] or 20.0
     local halfSize = cursorSize / 2.0
 
-    local cos_angle = math.cos(heading)
-    local sin_angle = math.sin(heading)
-
     -- Draw label above player if showLabels is enabled
     if showLabels then
         local playerName = entity.Name or 'Player'
         local drawList = imgui.GetWindowDrawList()
-        local textWidth, textHeight = imgui.CalcTextSize(playerName)
-        local labelX = screenX - textWidth / 2
-        local labelY = screenY - cursorSize - textHeight - 4
-        local padding = 4
-
-        -- Draw background
-        local bgColor = utils.mul_alpha(utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 0.7 }), contextAlpha)
-        drawList:AddRectFilled(
-            { labelX - padding, labelY - padding },
-            { labelX + textWidth + padding, labelY + textHeight + padding },
-            bgColor,
-            3.0
-        )
-
-        -- Draw text with player color
         local textColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorPlayer), contextAlpha)
-        drawList:AddText({ labelX, labelY }, textColor, playerName)
-    end
-
-    local corners = {
-        { x = -halfSize, y = -halfSize }, -- Top-left
-        { x = halfSize,  y = -halfSize }, -- Top-right
-        { x = halfSize,  y = halfSize },  -- Bottom-right
-        { x = -halfSize, y = halfSize }   -- Bottom-left
-    }
-
-    -- Rotate each corner and convert to screen coordinates
-    local rotated_corners = {}
-    for i, corner in ipairs(corners) do
-        local rotated_x = corner.x * cos_angle - corner.y * sin_angle
-        local rotated_y = corner.x * sin_angle + corner.y * cos_angle
-
-        rotated_corners[i] = {
-            screenX + rotated_x,
-            screenY + rotated_y
-        }
+        utils.draw_label(drawList, playerName, screenX, screenY, cursorSize, textColor, contextAlpha)
     end
 
     -- Check if mouse is hovering over player cursor
@@ -151,18 +115,7 @@ function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, con
     local texturePointer = tonumber(ffi.cast('uint32_t', player_overlay.cursor_texture))
     local color = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorPlayer), contextAlpha)
     if texturePointer then
-        drawList:AddImageQuad(
-            texturePointer,
-            rotated_corners[1],
-            rotated_corners[2],
-            rotated_corners[3],
-            rotated_corners[4],
-            { 0, 0 },
-            { 1, 0 },
-            { 1, 1 },
-            { 0, 1 },
-            color
-        )
+        utils.draw_rotated_texture(drawList, texturePointer, screenX, screenY, cursorSize, heading, color)
     end
 end
 
@@ -215,8 +168,7 @@ function player_overlay.draw_dot(mapData, windowPosX, windowPosY, contentMinX, c
     local dotColor = utils.mul_alpha(0xFF0000FF, contextAlpha)
     local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
 
-    drawList:AddCircleFilled({ screenX, screenY }, dotRadius, dotColor)
-    drawList:AddCircle({ screenX, screenY }, dotRadius, outlineColor, 0, 1.5)
+    utils.draw_circle_marker(drawList, screenX, screenY, dotRadius, dotColor, outlineColor, 1.5)
 end
 
 return player_overlay

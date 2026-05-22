@@ -1,11 +1,11 @@
-local tracked_entities = {}
+local npc_entities = {}
 local tracker = require('src.tracker')
 local utils = require('src.utils')
 local imgui = require('imgui')
 local map = require('src.map')
 local tooltip = require('src.overlays.tooltip')
 
-function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
+function npc_entities.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
     contextConfig = contextConfig or boussole.config
     contextAlpha = contextAlpha or 1.0
     local showLabels
@@ -14,20 +14,22 @@ function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, c
     else
         showLabels = contextConfig.showLabels[1]
     end
-    showLabels = showLabels and (contextConfig.showTrackedEntityLabels == nil or contextConfig.showTrackedEntityLabels[1])
-    if not contextConfig.showTrackedEntities[1] or not contextConfig.enableTracker[1] or not mapData or not mapData.entry then
+    showLabels = showLabels and (contextConfig.showNpcEntityLabels == nil or contextConfig.showNpcEntityLabels[1])
+    if not contextConfig.showNpcEntities[1] or not mapData or not mapData.entry then
         return
     end
 
-    local trackedEntities = tracker.get_tracked_entities()
+    local trackedEntities = tracker.get_npc_entities()
+    local trackerEntities = tracker.get_tracked_entities()
     local activeEntities = tracker.get_active_entities()
     local locationCache = tracker.get_location_cache()
 
-    local iconSize = contextConfig.iconSizeTrackedEntity and contextConfig.iconSizeTrackedEntity[1] or 10
+    local iconSize = contextConfig.iconSizeNpcEntity and contextConfig.iconSizeNpcEntity[1] or 6
     local drawList = imgui.GetWindowDrawList()
 
     local entMgr = AshitaCore:GetMemoryManager():GetEntity()
     local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
+    local trackerEnabled = contextConfig.enableTracker and contextConfig.enableTracker[1]
 
     for index = 1, 0x400 do
         local id = entMgr:GetServerId(index)
@@ -37,7 +39,7 @@ function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, c
 
         if id > 0 then
             local entity = trackedEntities[id]
-            if entity and entity.draw and entity.zoneId == zone then
+            if entity and entity.draw and entity.zoneId == zone and not (trackerEnabled and trackerEntities[id]) then
                 local enemyEntity = GetEntity(index)
                 local targetPosition = nil
 
@@ -93,9 +95,7 @@ function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, c
                         local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
                         local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
 
-                        -- Get entity color
-                        local color = entity.color or { 0.0, 1.0, 0.5, 1.0 }
-                        local colorU32 = utils.mul_alpha(utils.rgb_to_abgr(color), contextAlpha)
+                        local colorU32 = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorNpcEntity), contextAlpha)
 
                         utils.draw_circle_marker(drawList, screenX, screenY, iconSize, colorU32, utils.mul_alpha(0xFF000000, contextAlpha), 2.0)
 
@@ -120,4 +120,4 @@ function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, c
     end
 end
 
-return tracked_entities
+return npc_entities

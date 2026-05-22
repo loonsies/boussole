@@ -43,7 +43,7 @@
 # Quick use
 - You can open the right panel to filter what overlays are displayed, browse maps, redirect maps, customize UI, export maps to .BMP, and more
 - Maintaining right-click and moving the mouse will pan the map
-- Right-click the map to add a point; right-click a point to edit or delete it
+- Double right-click the map to add a point; double right-click a point to edit or delete it
 
 # Custom maps and icons
 - Custom maps : `<Ashita install>\config\addons\boussole\custom_maps`

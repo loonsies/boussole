@@ -9,6 +9,8 @@ local player_overlay = require('src.overlays.player')
 local party_overlay = require('src.overlays.party')
 local alliance_overlay = require('src.overlays.alliance')
 local warp_overlay = require('src.overlays.warp')
+local npc_entities = require('src.overlays.npc_entities')
+local mob_entities = require('src.overlays.mob_entities')
 local tracked_entities = require('src.overlays.tracked_entities')
 local controls = require('src.overlays.controls')
 local tooltip = require('src.overlays.tooltip')
@@ -478,31 +480,55 @@ function minimap.update()
 
             -- Build minimap-specific context to pass directly to overlays
             local miniCtx = {
-                showHomepoints        = boussole.config.minimapShowHomepoints,
-                showSurvivalGuides    = boussole.config.minimapShowSurvivalGuides,
-                showPlayer            = boussole.config.minimapShowPlayer,
-                showParty             = boussole.config.minimapShowParty,
-                showAlliance          = boussole.config.minimapShowAlliance,
-                showTrackedEntities   = boussole.config.minimapShowTrackedEntities,
-                enableTracker         = boussole.config.enableTracker,
-                showLabels            = boussole.config.minimapShowLabels,
-                iconSizeHomepoint     = boussole.config.minimapIconSizeHomepoint,
-                iconSizeSurvivalGuide = boussole.config.minimapIconSizeSurvivalGuide,
-                iconSizePlayer        = boussole.config.minimapIconSizePlayer,
-                iconSizeParty         = boussole.config.minimapIconSizeParty,
-                iconSizeAlliance      = boussole.config.minimapIconSizeAlliance,
-                iconSizeTrackedEntity = boussole.config.minimapIconSizeTrackedEntity,
-                colorHomepoint        = boussole.config.minimapColorHomepoint,
-                colorSurvivalGuide    = boussole.config.minimapColorSurvivalGuide,
-                colorPlayer           = boussole.config.minimapColorPlayer,
-                colorParty            = boussole.config.minimapColorParty,
-                colorAlliance         = boussole.config.minimapColorAlliance,
+                showHomepoints          = boussole.config.minimapShowHomepoints,
+                showSurvivalGuides      = boussole.config.minimapShowSurvivalGuides,
+                showPlayer              = boussole.config.minimapShowPlayer,
+                showParty               = boussole.config.minimapShowParty,
+                showAlliance            = boussole.config.minimapShowAlliance,
+                showNpcEntities         = boussole.config.minimapShowNpcEntities,
+                showMobEntities         = boussole.config.minimapShowMobEntities,
+                showTrackedEntities     = boussole.config.minimapShowTrackedEntities,
+                showHomepointLabels     = boussole.config.minimapShowHomepointLabels,
+                showSurvivalGuideLabels = boussole.config.minimapShowSurvivalGuideLabels,
+                showPlayerLabels        = boussole.config.minimapShowPlayerLabels,
+                showPartyLabels         = boussole.config.minimapShowPartyLabels,
+                showAllianceLabels      = boussole.config.minimapShowAllianceLabels,
+                showNpcEntityLabels     = boussole.config.minimapShowNpcEntityLabels,
+                showMobEntityLabels     = boussole.config.minimapShowMobEntityLabels,
+                showTrackedEntityLabels = boussole.config.minimapShowTrackedEntityLabels,
+                enableTracker           = boussole.config.enableTracker,
+                showLabels              = boussole.config.minimapShowLabels,
+                iconSizeHomepoint       = boussole.config.minimapIconSizeHomepoint,
+                iconSizeSurvivalGuide   = boussole.config.minimapIconSizeSurvivalGuide,
+                iconSizePlayer          = boussole.config.minimapIconSizePlayer,
+                iconSizeParty           = boussole.config.minimapIconSizeParty,
+                iconSizeAlliance        = boussole.config.minimapIconSizeAlliance,
+                iconSizeNpcEntity       = boussole.config.minimapIconSizeNpcEntity,
+                iconSizeMobEntity       = boussole.config.minimapIconSizeMobEntity,
+                iconSizeTrackedEntity   = boussole.config.minimapIconSizeTrackedEntity,
+                colorHomepoint          = boussole.config.minimapColorHomepoint,
+                colorSurvivalGuide      = boussole.config.minimapColorSurvivalGuide,
+                colorPlayer             = boussole.config.minimapColorPlayer,
+                colorParty              = boussole.config.minimapColorParty,
+                colorAlliance           = boussole.config.minimapColorAlliance,
+                colorNpcEntity          = boussole.config.minimapColorNpcEntity,
+                colorMobEntity          = boussole.config.minimapColorMobEntity,
             }
 
             warp_overlay.draw(miniCtx, map.current_map_data,
                 windowPosX, windowPosY, contentMinX, contentMinY,
                 minimap.map_offset.x, minimap.map_offset.y,
-                minimap.map_zoom, texW, overlayAlpha)
+                minimap.map_zoom, texW, overlayAlpha, contextLabels)
+
+            npc_entities.draw(miniCtx, map.current_map_data,
+                windowPosX, windowPosY, contentMinX, contentMinY,
+                minimap.map_offset.x, minimap.map_offset.y,
+                minimap.map_zoom, texW, overlayAlpha, contextLabels)
+
+            mob_entities.draw(miniCtx, map.current_map_data,
+                windowPosX, windowPosY, contentMinX, contentMinY,
+                minimap.map_offset.x, minimap.map_offset.y,
+                minimap.map_zoom, texW, overlayAlpha, contextLabels)
 
             tracked_entities.draw(miniCtx, map.current_map_data,
                 windowPosX, windowPosY, contentMinX, contentMinY,

@@ -12,9 +12,15 @@ local hovered_type = nil
 local hovered_index = 0
 
 -- Draw warp point markers on the map
-function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha)
+function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
     contextConfig = contextConfig or boussole.config
     contextAlpha = contextAlpha or 1.0
+    local showLabels
+    if contextLabels ~= nil then
+        showLabels = contextLabels
+    else
+        showLabels = contextConfig.showLabels[1]
+    end
     if not mapData then return end
 
     local resMgr = AshitaCore:GetResourceManager()
@@ -74,38 +80,11 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
                     local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorHomepoint), contextAlpha)
                     local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
 
-                    -- Draw as a diamond shape
-                    local size = markerRadius
-                    drawList:AddTriangleFilled(
-                        { screenX, screenY - size },
-                        { screenX - size * 0.7, screenY },
-                        { screenX, screenY },
-                        markerColor
-                    )
-                    drawList:AddTriangleFilled(
-                        { screenX, screenY - size },
-                        { screenX + size * 0.7, screenY },
-                        { screenX, screenY },
-                        markerColor
-                    )
-                    drawList:AddTriangleFilled(
-                        { screenX, screenY + size },
-                        { screenX - size * 0.7, screenY },
-                        { screenX, screenY },
-                        markerColor
-                    )
-                    drawList:AddTriangleFilled(
-                        { screenX, screenY + size },
-                        { screenX + size * 0.7, screenY },
-                        { screenX, screenY },
-                        markerColor
-                    )
+                    utils.draw_diamond_marker(drawList, screenX, screenY, markerRadius, markerColor, outlineColor)
 
-                    -- Draw outline
-                    drawList:AddLine({ screenX, screenY - size }, { screenX - size * 0.7, screenY }, outlineColor, 1.0)
-                    drawList:AddLine({ screenX - size * 0.7, screenY }, { screenX, screenY + size }, outlineColor, 1.0)
-                    drawList:AddLine({ screenX, screenY + size }, { screenX + size * 0.7, screenY }, outlineColor, 1.0)
-                    drawList:AddLine({ screenX + size * 0.7, screenY }, { screenX, screenY - size }, outlineColor, 1.0)
+                    if showLabels and (contextConfig.showHomepointLabels == nil or contextConfig.showHomepointLabels[1]) then
+                        utils.draw_label(drawList, string.format('Homepoint #%d', idx), screenX, screenY, markerRadius, markerColor, contextAlpha)
+                    end
                 end
             end
         end
@@ -147,23 +126,11 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
                     local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorSurvivalGuide), contextAlpha)
                     local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
 
-                    -- Draw as a square
-                    local size = markerRadius * 0.8
-                    drawList:AddRectFilled(
-                        { screenX - size, screenY - size },
-                        { screenX + size, screenY + size },
-                        markerColor
-                    )
+                    utils.draw_square_marker(drawList, screenX, screenY, markerRadius, markerColor, outlineColor, 1.5)
 
-                    -- Draw outline
-                    drawList:AddRect(
-                        { screenX - size, screenY - size },
-                        { screenX + size, screenY + size },
-                        outlineColor,
-                        0.0,
-                        0,
-                        1.5
-                    )
+                    if showLabels and (contextConfig.showSurvivalGuideLabels == nil or contextConfig.showSurvivalGuideLabels[1]) then
+                        utils.draw_label(drawList, 'Survival Guide', screenX, screenY, markerRadius, markerColor, contextAlpha)
+                    end
                 end
             end
         end
