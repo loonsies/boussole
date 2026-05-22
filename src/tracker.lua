@@ -1,6 +1,7 @@
 local tracker = {}
 
 local chat = require('chat')
+local utils = require('src.utils')
 
 -- Local state
 local trackedEntities = {} -- { [id] = { id, name, alias, color, alarm, draw, widescan, lastPacket } }
@@ -11,6 +12,8 @@ local npcEntities = {}     -- { [id] = { id, zoneId, name, alias, draw, index } 
 local packetQueue = {}
 local packetNextSend = 0
 local lastSend = 0
+local nearbyEntityScanInterval = 30
+local lastNearbyEntityScan = -nearbyEntityScanInterval
 local locationCache = {}
 
 -- Profile management
@@ -326,7 +329,7 @@ function tracker.is_sending_packets()
     return #packetQueue > 0
 end
 
-local function get_observed_entity_kind(index)
+local function get_entity_kind(index)
     local spawnFlags = AshitaCore:GetMemoryManager():GetEntity():GetSpawnFlags(index)
     if bit.band(spawnFlags, 0x10) ~= 0 then
         return 'mob'
@@ -337,7 +340,7 @@ local function get_observed_entity_kind(index)
     return nil
 end
 
-local function normalize_observed_name(name)
+local function normalize_entity_name(name)
     if name ~= nil then
         name = name:trim()
     end
@@ -353,7 +356,25 @@ local function normalize_observed_name(name)
     return name
 end
 
-local function update_observed_entity(id, index, kind)
+local function get_nearby_entity_name(id, index)
+    local zoneEntity = zoneEntities[id]
+    local entity = GetEntity(index)
+    return normalize_entity_name((zoneEntity and zoneEntity.name) or (entity and entity.Name))
+end
+
+local function get_entity_position(entity)
+    if entity == nil or entity.Movement == nil or entity.Movement.LocalPosition == nil then
+        return nil
+    end
+
+    return {
+        x = entity.Movement.LocalPosition.X,
+        y = entity.Movement.LocalPosition.Y,
+        z = entity.Movement.LocalPosition.Z,
+    }
+end
+
+local function update_nearby_entity(id, index, kind)
     if id == 0 or (trackedEntities[id] == nil and kind == nil) then
         return
     end
@@ -366,9 +387,7 @@ local function update_observed_entity(id, index, kind)
     end
 
     local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
-    local zoneEntity = zoneEntities[id]
-    local entity = GetEntity(index)
-    local name = normalize_observed_name((zoneEntity and zoneEntity.name) or (entity and entity.Name))
+    local name = get_nearby_entity_name(id, index)
     if name == nil then
         mobEntities[id] = nil
         npcEntities[id] = nil
@@ -376,21 +395,74 @@ local function update_observed_entity(id, index, kind)
         return
     end
 
-    local observed = {
+    local nearbyEntity = {
         id = id,
         zoneId = zone,
         name = name,
         alias = name,
         draw = true,
         index = index,
+        lastSeen = os.clock(),
     }
 
     if kind == 'mob' then
-        mobEntities[id] = observed
+        mobEntities[id] = nearbyEntity
         npcEntities[id] = nil
     elseif kind == 'npc' then
-        npcEntities[id] = observed
+        npcEntities[id] = nearbyEntity
         mobEntities[id] = nil
+    end
+end
+
+function tracker.scan_nearby_entities()
+    local currentTime = os.clock()
+    if currentTime - lastNearbyEntityScan < nearbyEntityScanInterval then
+        return
+    end
+    lastNearbyEntityScan = currentTime
+
+    local config = boussole.config
+    if not config or not ((config.showNpcEntities and config.showNpcEntities[1]) or (config.showMobEntities and config.showMobEntities[1])) then
+        return
+    end
+
+    local playerEntity = GetPlayerEntity()
+    local playerPosition = get_entity_position(playerEntity)
+    if playerPosition == nil then
+        return
+    end
+
+    local entMgr = AshitaCore:GetMemoryManager():GetEntity()
+    local maxDistance = 50
+    local maxDistanceSq = maxDistance * maxDistance
+
+    for index = 0, 2303 do
+        local entity = GetEntity(index)
+        if utils.is_entity_rendered(entity) then
+            local position = get_entity_position(entity)
+            if position ~= nil then
+                local dx = position.x - playerPosition.x
+                local dy = position.y - playerPosition.y
+                if (dx * dx + dy * dy) <= maxDistanceSq then
+                    local id = entMgr:GetServerId(index)
+                    local kind = get_entity_kind(index)
+                    local kindEnabled = (kind == 'npc' and config.showNpcEntities and config.showNpcEntities[1])
+                        or (kind == 'mob' and config.showMobEntities and config.showMobEntities[1])
+                    local isAlive = kind ~= 'mob' or entity.HPPercent == nil or entity.HPPercent > 0
+
+                    if id > 0 and kindEnabled and isAlive then
+                        update_nearby_entity(id, index, kind)
+                        activeEntities[id] = {
+                            x = position.x,
+                            y = position.y,
+                            z = position.z,
+                            lastSeen = currentTime,
+                            index = index
+                        }
+                    end
+                end
+            end
+        end
     end
 end
 
@@ -398,13 +470,15 @@ end
 function tracker.handle_entity_update(e)
     local id = struct.unpack('L', e.data, 0x04 + 1)
     local index = struct.unpack('H', e.data, 0x08 + 1)
-    local kind = get_observed_entity_kind(index)
+    local kind = get_entity_kind(index)
 
     local mask = struct.unpack('B', e.data, 0x0A + 1)
 
     if not trackedEntities[id] and kind == nil then
         return
     end
+
+    update_nearby_entity(id, index, kind)
 
     -- Check if entity is hidden
     if bit.band(mask, 0x07) ~= 0 then
@@ -471,8 +545,6 @@ function tracker.handle_entity_update(e)
             index = index
         }
 
-        update_observed_entity(id, index, kind)
-
         -- Trigger tracker actions only when the tracker feature is enabled
         local entity = trackedEntities[id]
         local trackerEnabled = boussole.config.enableTracker and boussole.config.enableTracker[1]
@@ -489,6 +561,18 @@ end
 -- Handle position cache update (0x0E with position data)
 function tracker.cache_position(index, x, y, z)
     locationCache[index] = { x = x, y = y, z = z }
+
+    for id, entity in pairs(npcEntities) do
+        if entity.index == index then
+            activeEntities[id] = { x = x, y = y, z = z, lastSeen = os.clock(), index = index }
+        end
+    end
+
+    for id, entity in pairs(mobEntities) do
+        if entity.index == index then
+            activeEntities[id] = { x = x, y = y, z = z, lastSeen = os.clock(), index = index }
+        end
+    end
 end
 
 -- Process entity timeouts
@@ -507,7 +591,8 @@ function tracker.process_timeouts()
     local mobTimeout = boussole.config.mobEntityTimeout and boussole.config.mobEntityTimeout[1] or 30
     if mobTimeout > 0 then
         for id, entity in pairs(mobEntities) do
-            if activeEntities[id] == nil or currentTime - activeEntities[id].lastSeen >= mobTimeout then
+            local lastSeen = activeEntities[id] and activeEntities[id].lastSeen or entity.lastSeen
+            if lastSeen == nil or currentTime - lastSeen >= mobTimeout then
                 activeEntities[id] = nil
                 mobEntities[id] = nil
             end
@@ -517,7 +602,8 @@ function tracker.process_timeouts()
     local npcTimeout = boussole.config.npcEntityTimeout and boussole.config.npcEntityTimeout[1] or 30
     if npcTimeout > 0 then
         for id, entity in pairs(npcEntities) do
-            if activeEntities[id] == nil or currentTime - activeEntities[id].lastSeen >= npcTimeout then
+            local lastSeen = activeEntities[id] and activeEntities[id].lastSeen or entity.lastSeen
+            if lastSeen == nil or currentTime - lastSeen >= npcTimeout then
                 activeEntities[id] = nil
                 npcEntities[id] = nil
             end
@@ -531,6 +617,7 @@ function tracker.handle_zone_change()
     zoneEntities = {}
     currentZoneId = 0
     currentSubZoneId = 0
+    lastNearbyEntityScan = -nearbyEntityScanInterval
 
     -- Clear packet queue and notify if packets were queued
     if tracker.is_sending_packets() then

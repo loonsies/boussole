@@ -5,6 +5,8 @@ local imgui = require('imgui')
 local map = require('src.map')
 local tooltip = require('src.overlays.tooltip')
 
+local mob_entities = {}
+
 function mob_entities.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
     contextConfig = contextConfig or boussole.config
     contextAlpha = contextAlpha or 1.0
@@ -19,100 +21,69 @@ function mob_entities.draw(contextConfig, mapData, windowPosX, windowPosY, conte
         return
     end
 
-    local trackedEntities = tracker.get_mob_entities()
+    local nearbyEntities = tracker.get_mob_entities()
     local trackerEntities = tracker.get_tracked_entities()
     local activeEntities = tracker.get_active_entities()
-    local locationCache = tracker.get_location_cache()
 
     local iconSize = contextConfig.iconSizeMobEntity and contextConfig.iconSizeMobEntity[1] or 6
     local drawList = imgui.GetWindowDrawList()
 
-    local entMgr = AshitaCore:GetMemoryManager():GetEntity()
     local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
     local trackerEnabled = contextConfig.enableTracker and contextConfig.enableTracker[1]
 
-    for index = 1, 0x400 do
-        local id = entMgr:GetServerId(index)
-        if id == 0 and locationCache[index] then
-            id = bit.bor(0x01000000, bit.lshift(zone, 0x0C), index)
-        end
+    for id, entity in pairs(nearbyEntities) do
+        if entity and entity.draw and entity.zoneId == zone and not (trackerEnabled and trackerEntities[id]) then
+            local enemyEntity = entity.index and GetEntity(entity.index) or nil
+            local targetPosition = nil
+            local canDrawEntity = enemyEntity == nil or utils.is_entity_rendered(enemyEntity)
 
-        if id > 0 then
-            local entity = trackedEntities[id]
-            if entity and entity.draw and entity.zoneId == zone and not (trackerEnabled and trackerEntities[id]) then
-                local enemyEntity = GetEntity(index)
-                local targetPosition = nil
+            local activePos = activeEntities[id]
+            if activePos and canDrawEntity then
+                targetPosition = { x = activePos.x, y = activePos.y, z = activePos.z }
+            elseif canDrawEntity and enemyEntity ~= nil then
+                -- Fallback to entity position if not in cache
+                targetPosition = {
+                    x = enemyEntity.Movement.LocalPosition.X,
+                    y = enemyEntity.Movement.LocalPosition.Y,
+                    z = enemyEntity.Movement.LocalPosition.Z,
+                }
+            end
 
-                local activePos = activeEntities[id]
-                if activePos then
-                    targetPosition = { x = activePos.x, y = activePos.y, z = activePos.z }
-                elseif enemyEntity ~= nil then
-                    -- Fallback to entity position if not in cache
-                    targetPosition = {
-                        x = enemyEntity.Movement.LocalPosition.X,
-                        y = enemyEntity.Movement.LocalPosition.Y,
-                        z = enemyEntity.Movement.LocalPosition.Z,
-                    }
-                end
-
-                if targetPosition ~= nil then
-                    local shouldDraw = false
-
-                    if enemyEntity == nil then
-                        shouldDraw = true
+            if targetPosition ~= nil then
+                -- Convert world coordinates to map coordinates
+                local mapX, mapY = map.world_to_map_coords(mapData.entry, targetPosition.x, targetPosition.y, targetPosition.z)
+                if mapX ~= nil and mapY ~= nil then
+                    -- Convert map coordinates to texture coordinates
+                    local texX, texY
+                    if mapData.entry._isCustomMap then
+                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
                     else
-                        -- Check render flags
-                        local renderFlags = enemyEntity.Render.Flags0
-                        if renderFlags then
-                            local isRendered = bit.band(renderFlags, 0x200) == 0x200 and bit.band(renderFlags, 0x4000) == 0
-
-                            if isRendered then
-                                shouldDraw = true
-                            elseif bit.band(renderFlags, 0x00040000) == 0 then
-                                shouldDraw = true
-                            end
-                        end
+                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
                     end
 
-                    if shouldDraw then
-                        -- Convert world coordinates to map coordinates
-                        local mapX, mapY = map.world_to_map_coords(mapData.entry, targetPosition.x, targetPosition.y, targetPosition.z)
-                        if mapX == nil or mapY == nil then
-                            return
-                        end
+                    -- Convert texture coordinates to screen coordinates
+                    local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
+                    local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
 
-                        -- Convert map coordinates to texture coordinates
-                        local texX, texY
-                        if mapData.entry._isCustomMap then
-                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
-                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
-                        else
-                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
-                        end
+                    local colorU32 = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorMobEntity), contextAlpha)
 
-                        -- Convert texture coordinates to screen coordinates
-                        local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
-                        local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
+                    utils.draw_circle_marker(drawList, screenX, screenY, iconSize, colorU32, utils.mul_alpha(0xFF000000, contextAlpha), 2.0)
 
-                        local colorU32 = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorMobEntity), contextAlpha)
+                    -- Add to tooltip if hovering
+                    local mousePosX, mousePosY = imgui.GetMousePos()
+                    local distance = math.sqrt((mousePosX - screenX) ^ 2 + (mousePosY - screenY) ^ 2)
 
-                        utils.draw_circle_marker(drawList, screenX, screenY, iconSize, colorU32, utils.mul_alpha(0xFF000000, contextAlpha), 2.0)
+                    if distance <= iconSize + 5 then
+                        local displayName = entity.alias or entity.name
+                        tooltip.add_line(displayName, colorU32)
+                    end
 
-                        -- Add to tooltip if hovering
-                        local mousePosX, mousePosY = imgui.GetMousePos()
-                        local distance = math.sqrt((mousePosX - screenX) ^ 2 + (mousePosY - screenY) ^ 2)
-
-                        if distance <= iconSize + 5 then
-                            local displayName = entity.alias or entity.name
-                            tooltip.add_line(displayName, colorU32)
-                        end
-
-                        -- Draw label above marker if showLabels is enabled
-                        if showLabels then
-                            local displayName = entity.alias or entity.name
-                            utils.draw_label(drawList, displayName, screenX, screenY, iconSize, colorU32, contextAlpha)
-                        end
+                    -- Draw label above marker if showLabels is enabled
+                    if showLabels then
+                        local displayName = entity.alias or entity.name
+                        utils.draw_label(drawList, displayName, screenX, screenY, iconSize, colorU32, contextAlpha)
                     end
                 end
             end

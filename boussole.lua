@@ -114,7 +114,7 @@ ashita.events.register('load', 'load_cb', function ()
 
             boussole.last_sub_zone_id = currentSubZone or 0
 
-            -- Load zone entities for observed NPCs/mobs and tracker search data
+            -- Load zone entities for nearby NPCs/mobs and tracker search data
             if currentZone and currentZone > 0 then
                 tracker.load_zone_entities(currentZone, currentSubZone)
 
@@ -141,6 +141,7 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
     if boussole.config.enableTracker[1] then
         tracker.process_packet_queue()
     end
+    tracker.scan_nearby_entities()
     tracker.process_timeouts()
 
     -- Check for floor changes every 1 second
@@ -237,7 +238,7 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                     end
                 end
 
-                -- Load zone entities for observed NPCs/mobs and tracker search data
+                -- Load zone entities for nearby NPCs/mobs and tracker search data
                 if newZone and newZone > 0 then
                     tracker.load_zone_entities(newZone, newSubZone)
 
@@ -265,7 +266,7 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
         boussole.zoning         = true
     end
 
-    -- Handle entity update packets for observed NPCs/mobs and tracker positions
+    -- Handle entity update packets for nearby NPCs/mobs and tracker positions
     if e.id == 0x00E then
         tracker.handle_entity_update(e)
 

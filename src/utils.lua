@@ -62,6 +62,15 @@ function utils.mul_alpha(color, alpha)
     return bit.bor(bit.lshift(math.floor(a * alpha), 24), rgb)
 end
 
+function utils.is_entity_rendered(entity)
+    if entity == nil or entity.Render == nil or entity.Render.Flags0 == nil then
+        return false
+    end
+
+    local renderFlags = entity.Render.Flags0
+    return bit.band(renderFlags, 0x200) == 0x200 and bit.band(renderFlags, 0x4000) == 0
+end
+
 function utils.draw_label(drawList, label, screenX, screenY, markerSize, textColor, alpha)
     alpha = alpha or 1.0
 
