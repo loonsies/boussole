@@ -224,6 +224,7 @@ function minimap.update()
     local ui = require('src.ui')
     if not ui.texture_id or not ui.map_texture then return end
     if not map.current_map_data or not map.current_map_data.entry then return end
+    if map.current_map_data.entry.ZoneId == 0 and map.current_map_data.entry.FloorId == 0 then return end
 
     local size = math.max(80, boussole.config.minimapSize[1] or 200)
 
