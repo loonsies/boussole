@@ -89,6 +89,117 @@ function utils.draw_label(drawList, label, screenX, screenY, markerSize, textCol
     drawList:AddText({ labelX, labelY }, textColor, label)
 end
 
+function utils.clamp_text_to_width(text, maxWidth)
+    if maxWidth <= 0 then return '' end
+    if select(1, imgui.CalcTextSize(text)) <= maxWidth then return text end
+
+    local ellipsis = '...'
+    local ellipsisWidth = select(1, imgui.CalcTextSize(ellipsis))
+    if ellipsisWidth >= maxWidth then return ellipsis end
+
+    local lo = 0
+    local hi = #text
+    while lo < hi do
+        local mid = math.ceil((lo + hi) / 2)
+        if select(1, imgui.CalcTextSize(text:sub(1, mid) .. ellipsis)) <= maxWidth then
+            lo = mid
+        else
+            hi = mid - 1
+        end
+    end
+
+    return text:sub(1, lo) .. ellipsis
+end
+
+local function utf8_first_codepoint(text)
+    local b1 = text:byte(1)
+    if not b1 then return nil end
+
+    if b1 < 0x80 then
+        return b1
+    elseif b1 < 0xE0 then
+        local b2 = text:byte(2)
+        if not b2 then return nil end
+        return bit.bor(bit.lshift(bit.band(b1, 0x1F), 6), bit.band(b2, 0x3F))
+    elseif b1 < 0xF0 then
+        local b2, b3 = text:byte(2), text:byte(3)
+        if not b2 or not b3 then return nil end
+        return bit.bor(
+            bit.lshift(bit.band(b1, 0x0F), 12),
+            bit.lshift(bit.band(b2, 0x3F), 6),
+            bit.band(b3, 0x3F)
+        )
+    end
+
+    local b2, b3, b4 = text:byte(2), text:byte(3), text:byte(4)
+    if not b2 or not b3 or not b4 then return nil end
+    return bit.bor(
+        bit.lshift(bit.band(b1, 0x07), 18),
+        bit.lshift(bit.band(b2, 0x3F), 12),
+        bit.lshift(bit.band(b3, 0x3F), 6),
+        bit.band(b4, 0x3F)
+    )
+end
+
+local glyphBoundsCache = {}
+
+local function get_glyph_bounds(icon)
+    local font = imgui.GetFontBaked()
+    local codepoint = utf8_first_codepoint(icon)
+    if not font or not codepoint then
+        return nil
+    end
+
+    local ok, glyph = pcall(function ()
+        return font:FindGlyph(codepoint)
+    end)
+    if not ok or not glyph or not glyph.X0 then
+        if not ok or not glyph or not glyph.x0 then
+            return nil
+        end
+    end
+
+    local fontSize = imgui.GetFontSize()
+    local bakedSize = font.Size or fontSize
+    local cacheKey = tostring(codepoint) .. ':' .. tostring(bakedSize) .. ':' .. tostring(fontSize)
+    local cached = glyphBoundsCache[cacheKey]
+    if cached then
+        return cached[1], cached[2], cached[3], cached[4]
+    end
+
+    local scale = fontSize / bakedSize
+    local x0 = glyph.X0 or glyph.x0
+    local y0 = glyph.Y0 or glyph.y0
+    local x1 = glyph.X1 or glyph.x1
+    local y1 = glyph.Y1 or glyph.y1
+    local bounds = { x0 * scale, y0 * scale, x1 * scale, y1 * scale }
+    glyphBoundsCache[cacheKey] = bounds
+    return bounds[1], bounds[2], bounds[3], bounds[4]
+end
+
+function utils.draw_icon_button(id, icon, size)
+    local clicked = imgui.Button('##' .. id, size)
+    local minX, minY = imgui.GetItemRectMin()
+    local maxX, maxY = imgui.GetItemRectMax()
+
+    local glyphX0, glyphY0, glyphX1, glyphY1 = get_glyph_bounds(icon)
+    local textX, textY
+    if glyphX0 then
+        local centerX = minX + (maxX - minX) * 0.5
+        local centerY = minY + (maxY - minY) * 0.5
+        textX = centerX - (glyphX0 + glyphX1) * 0.5
+        textY = centerY - (glyphY0 + glyphY1) * 0.5
+    else
+        local textW, textH = imgui.CalcTextSize(icon)
+        textX = minX + ((maxX - minX) - textW) * 0.5
+        textY = minY + ((maxY - minY) - textH) * 0.5
+    end
+
+    imgui.GetWindowDrawList():AddText({ textX, textY }, 0xFFFFFFFF, icon)
+
+    return clicked
+end
+
 function utils.draw_circle_marker(drawList, screenX, screenY, radius, color, outlineColor, outlineThickness)
     drawList:AddCircleFilled({ screenX, screenY }, radius, color)
 

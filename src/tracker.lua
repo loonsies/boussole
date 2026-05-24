@@ -251,7 +251,7 @@ function tracker.clear_all()
     end
 
     packetQueue = {}
-    boussole.trackedSearchResults = nil
+    boussole.trackedSearchResults = {}
 end
 
 -- Clear zone-specific data on zone change
@@ -295,11 +295,21 @@ function tracker.send_widescan(id)
 end
 
 -- Queue all tracked entities for packet sending
-function tracker.send_all_packets()
+function tracker.send_all_packets(entities)
     packetQueue = {}
-    for id, entity in pairs(trackedEntities) do
-        table.insert(packetQueue, entity)
+
+    if entities then
+        for _, entity in ipairs(entities) do
+            if trackedEntities[entity.id] then
+                table.insert(packetQueue, trackedEntities[entity.id])
+            end
+        end
+    else
+        for id, entity in pairs(trackedEntities) do
+            table.insert(packetQueue, entity)
+        end
     end
+
     packetNextSend = os.clock()
 
     -- Print chat message

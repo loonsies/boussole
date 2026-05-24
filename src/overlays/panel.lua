@@ -184,7 +184,7 @@ local function draw_map_tab_tracker()
     end
 
     imgui.SameLine()
-    if imgui.Button(ICON_FA_FLOPPY_DISK, { 50, 0 }) then
+    if utils.draw_icon_button('TrackerProfileSave', ICON_FA_FLOPPY_DISK, { 50, 0 }) then
         if currentProfile ~= '' then
             tracker.save_profile(currentProfile)
             tracker.save_tracker_data()
@@ -220,7 +220,7 @@ local function draw_map_tab_tracker()
     end
 
     imgui.SameLine()
-    if imgui.Button(ICON_FA_TRASH, { 50, 0 }) then
+    if utils.draw_icon_button('TrackerProfileDelete', ICON_FA_TRASH, { 50, 0 }) then
         if currentProfile ~= '' then
             tracker.delete_profile(currentProfile)
             boussole.config.lastLoadedTrackerProfile = ''
@@ -263,7 +263,9 @@ local function draw_map_tab_tracker()
             end
 
             imgui.Text(string.format('Search (%d)', #boussole.trackerSearchResults))
-            imgui.SetNextItemWidth(-1)
+            local searchButtonSpacing = 4
+            local addAllButtonSize = imgui.GetFrameHeight()
+            imgui.SetNextItemWidth(-(addAllButtonSize + searchButtonSpacing))
             if imgui.InputText('##TrackerSearch', boussole.trackerSearch, 256) then
                 -- Update search results
                 boussole.trackerSearchResults = {}
@@ -279,8 +281,8 @@ local function draw_map_tab_tracker()
                     return a.name < b.name
                 end)
             end
-
-            if imgui.Button(ICON_FA_CHECK_DOUBLE .. ' Add all', { -1, 0 }) then
+            imgui.SameLine(0, searchButtonSpacing)
+            if utils.draw_icon_button('TrackerAddAllSearchResults', ICON_FA_CHECK_DOUBLE, { addAllButtonSize, 0 }) then
                 local added = 0
                 local existing = 0
                 for _, entity in ipairs(boussole.trackerSearchResults) do
@@ -300,43 +302,63 @@ local function draw_map_tab_tracker()
                     boussole.trackedSearchResults = {}
                 end
             end
+            if imgui.IsItemHovered() then
+                imgui.SetTooltip('Add all')
+            end
             imgui.Spacing()
 
             -- Calculate remaining height for the list
             local _, remainingHeight = imgui.GetContentRegionAvail()
             local buttonsHeight = imgui.GetFrameHeightWithSpacing() * 2 + 10
             if imgui.BeginChild('##ZoneEntityList', { -1, remainingHeight - buttonsHeight }, ImGuiChildFlags_Borders) then
+                local trackedEntities = tracker.get_tracked_entities()
                 if imgui.BeginTable('##ZoneEntityTable', 2, 0) then
                     imgui.TableSetupColumn('##Name', 0, 0.85)
                     imgui.TableSetupColumn('##Add', 0, 0.15)
 
-                    for i, entity in ipairs(boussole.trackerSearchResults) do
-                        imgui.TableNextRow()
-                        imgui.TableSetColumnIndex(0)
+                    local results = boussole.trackerSearchResults
+                    local itemHeight = imgui.GetTextLineHeight()
+                    local clipper = ImGuiListClipper.new()
+                    clipper:Begin(#results, itemHeight)
 
-                        local itemHeight = imgui.GetTextLineHeight()
-                        local identifier = format_identifier(entity)
-                        local displayText = string.format('%s %s', entity.name, identifier)
-                        local isSelected = boussole.trackerSelections[entity.id] or false
-                        if imgui.Selectable(displayText .. '##ZoneEnt' .. entity.id, isSelected, 0, { 0, itemHeight }) then
-                            -- Toggle selection on click using entity ID
-                            boussole.trackerSelections[entity.id] = not boussole.trackerSelections[entity.id]
-                            boussole.trackerSelection = i
-                        end
+                    while clipper:Step() do
+                        for i = clipper.DisplayStart, clipper.DisplayEnd - 1 do
+                            local entity = results[i + 1]
+                            imgui.TableNextRow()
+                            imgui.TableSetColumnIndex(0)
 
-                        imgui.TableSetColumnIndex(1)
-                        imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 })
-                        if imgui.Button('+##Add' .. entity.id, { -1, itemHeight }) then
-                            local result = tracker.add_entity(entity.id, entity.name, entity.name)
-                            if result == true then
-                                print(chat.header(addon.name):append(chat.message(string.format('Added %s to tracking.', entity.name))))
-                                boussole.trackedSearchResults = {}
-                            elseif result == 'exists' then
-                                print(chat.header(addon.name):append(chat.message(string.format('%s is already being tracked.', entity.name))))
+                            local identifier = format_identifier(entity)
+                            local displayText = string.format('%s %s', entity.name, identifier)
+                            local isSelected = boussole.trackerSelections[entity.id] or false
+                            if imgui.Selectable(displayText .. '##ZoneEnt' .. entity.id, isSelected, 0, { 0, itemHeight }) then
+                                -- Toggle selection on click using entity ID
+                                boussole.trackerSelections[entity.id] = not boussole.trackerSelections[entity.id]
+                                boussole.trackerSelection = i + 1
                             end
+
+                            imgui.TableSetColumnIndex(1)
+                            local isTracked = trackedEntities[entity.id] ~= nil
+                            local toggleText = isTracked and '-' or '+'
+                            imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 })
+                            if imgui.Button(toggleText .. '##TrackToggle' .. entity.id, { -1, itemHeight }) then
+                                if isTracked then
+                                    tracker.remove_entity(entity.id)
+                                    boussole.trackedSearchResults = nil
+                                else
+                                    local result = tracker.add_entity(entity.id, entity.name, entity.name)
+                                    if result == true then
+                                        print(chat.header(addon.name):append(chat.message(string.format('Added %s to tracking.', entity.name))))
+                                        boussole.trackedSearchResults = nil
+                                    elseif result == 'exists' then
+                                        print(chat.header(addon.name):append(chat.message(string.format('%s is already being tracked.', entity.name))))
+                                    end
+                                end
+                            end
+                            imgui.PopStyleVar()
                         end
-                        imgui.PopStyleVar()
                     end
+
+                    clipper:End()
 
                     imgui.EndTable()
                 end
@@ -406,7 +428,9 @@ local function draw_map_tab_tracker()
 
             -- Search bar
             imgui.Text(string.format('Search (%d)', boussole.trackedSearchResults and #boussole.trackedSearchResults or 0))
-            imgui.SetNextItemWidth(-1)
+            local searchButtonSpacing = 4
+            local searchButtonSize = imgui.GetFrameHeight()
+            imgui.SetNextItemWidth(-(searchButtonSize * 2 + searchButtonSpacing * 2))
             if imgui.InputText('##TrackedSearch', boussole.trackedSearch, 256) then
                 -- Update search results
                 boussole.trackedSearchResults = {}
@@ -429,53 +453,92 @@ local function draw_map_tab_tracker()
                 end
             end
 
+            imgui.SameLine(0, searchButtonSpacing)
+            local isSending = tracker.is_sending_packets()
+            if utils.draw_icon_button('SinglePacketAll', ICON_FA_LIST_CHECK, { searchButtonSize, 0 }) and not isSending then
+                tracker.send_all_packets(boussole.trackedSearchResults)
+            end
+            if imgui.IsItemHovered() then
+                imgui.SetTooltip('Single packet all')
+            end
+            imgui.SameLine(0, searchButtonSpacing)
+            if utils.draw_icon_button('ClearAllTracked', ICON_FA_TRASH, { searchButtonSize, 0 }) then
+                tracker.clear_all()
+                boussole.trackedSelection = -1
+                -- Clear tracked search results to trigger refresh
+                boussole.trackedSearchResults = {}
+                boussole.trackerSearchResults = nil
+            end
+            if imgui.IsItemHovered() then
+                imgui.SetTooltip('Clear all')
+            end
+
             imgui.Spacing()
 
             -- Calculate height needed for controls below the list
             local controlsHeight = 0
-            -- Two buttons (Single packet all, Clear all)
-            controlsHeight = controlsHeight + imgui.GetFrameHeightWithSpacing() * 2
             -- Spacing after list
             controlsHeight = controlsHeight + 5
             -- Selected entity controls if any selected
             if boussole.trackedSelection > 0 and boussole.trackedSelection <= #boussole.trackedSearchResults then
-                -- Separator, text header, spacing, alias input, color edit, 3 checkboxes, spacing, 2 buttons
-                controlsHeight = controlsHeight + imgui.GetFrameHeightWithSpacing() * 10 + 40
+                -- Separator, entity header, spacing, alias input, color edit, 3 checkboxes, timeout
+                controlsHeight = controlsHeight + imgui.GetFrameHeightWithSpacing() * 7 + 28
             end
 
             local _, availHeight = imgui.GetContentRegionAvail()
             local listHeight = availHeight - controlsHeight
 
             if imgui.BeginChild('##TrackedEntityList', { -1, listHeight }, ImGuiChildFlags_Borders) then
-                if imgui.BeginTable('##TrackedEntityTable', 2, 0) then
-                    imgui.TableSetupColumn('##Name', 0, 0.85)
-                    imgui.TableSetupColumn('##Remove', 0, 0.15)
+                if imgui.BeginTable('##TrackedEntityTable', 3, 0) then
+                    imgui.TableSetupColumn('##Name', 0, 0.75)
+                    imgui.TableSetupColumn('##Packet', 0, 0.125)
+                    imgui.TableSetupColumn('##Remove', 0, 0.125)
 
-                    for i, entity in ipairs(boussole.trackedSearchResults) do
-                        imgui.TableNextRow()
-                        imgui.TableSetColumnIndex(0)
+                    local results = boussole.trackedSearchResults
+                    local itemHeight = imgui.GetTextLineHeight()
+                    local clipper = ImGuiListClipper.new()
+                    clipper:Begin(#results, itemHeight)
 
-                        local displayName = entity.alias ~= entity.name and
-                            string.format('%s (%s)', entity.name, entity.alias) or entity.name
-                        local identifier = format_identifier(entity)
-                        displayName = string.format('%s %s', displayName, identifier)
+                    while clipper:Step() do
+                        for i = clipper.DisplayStart, clipper.DisplayEnd - 1 do
+                            local entity = results[i + 1]
+                            imgui.TableNextRow()
+                            imgui.TableSetColumnIndex(0)
 
-                        local itemHeight = imgui.GetTextLineHeight()
-                        if imgui.Selectable(displayName .. '##Tracked' .. entity.id, boussole.trackedSelection == i, 0, { 0, itemHeight }) then
-                            boussole.trackedSelection = i
-                        end
+                            local displayName = entity.alias ~= entity.name and
+                                string.format('%s (%s)', entity.name, entity.alias) or entity.name
+                            local identifier = format_identifier(entity)
+                            displayName = string.format('%s %s', displayName, identifier)
 
-                        imgui.TableSetColumnIndex(1)
-                        imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 })
-                        if imgui.Button('-##Rem' .. entity.id, { -1, itemHeight }) then
-                            tracker.remove_entity(entity.id)
-                            if boussole.trackedSelection == i then
-                                boussole.trackedSelection = -1
+                            if imgui.Selectable(displayName .. '##Tracked' .. entity.id, boussole.trackedSelection == i + 1, 0, { 0, itemHeight }) then
+                                boussole.trackedSelection = i + 1
                             end
-                            boussole.trackedSearchResults = {}
+
+                            imgui.TableSetColumnIndex(1)
+                            imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 })
+                            if utils.draw_icon_button('PacketRow' .. entity.id, ICON_FA_LOCATION_DOT, { -1, itemHeight }) then
+                                tracker.send_single_packet(entity.id)
+                            end
+                            imgui.PopStyleVar()
+                            if imgui.IsItemHovered() then
+                                imgui.SetTooltip('Single packet')
+                            end
+
+                            imgui.TableSetColumnIndex(2)
+                            imgui.PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 })
+                            if imgui.Button('-##Rem' .. entity.id, { -1, itemHeight }) then
+                                tracker.remove_entity(entity.id)
+                                if boussole.trackedSelection == i + 1 then
+                                    boussole.trackedSelection = -1
+                                end
+                                boussole.trackedSearchResults = {}
+                                boussole.trackerSearchResults = nil
+                            end
+                            imgui.PopStyleVar()
                         end
-                        imgui.PopStyleVar()
                     end
+
+                    clipper:End()
 
                     imgui.EndTable()
                 end
@@ -484,30 +547,33 @@ local function draw_map_tab_tracker()
 
             imgui.Spacing()
 
-            -- Packet controls
-            local isSending = tracker.is_sending_packets()
-            if not isSending then
-                if imgui.Button(ICON_FA_LIST_CHECK .. ' Single packet all', { -1, 0 }) then
-                    tracker.send_all_packets()
-                end
-            else
-                imgui.TextColored({ 1.0, 0.5, 0.2, 1.0 }, 'Sending packets...')
-            end
-
-            if imgui.Button(ICON_FA_TRASH .. ' Clear all', { -1, 0 }) then
-                tracker.clear_all()
-                boussole.trackedSelection = -1
-                -- Clear tracked search results to trigger refresh
-                boussole.trackedSearchResults = {}
-            end
-
             -- Selected entity controls
             if boussole.trackedSelection > 0 and boussole.trackedSelection <= #boussole.trackedSearchResults then
                 local entity = boussole.trackedSearchResults[boussole.trackedSelection]
 
                 imgui.Spacing()
                 imgui.Separator()
-                imgui.Text('Selected entity')
+                local selectedLabel = string.format('%s %s', entity.name, format_identifier(entity))
+                local selectedButtonSize = imgui.GetFrameHeight()
+                local selectedLabelWidth = select(1, imgui.GetContentRegionAvail()) - selectedButtonSize * 2 - 12
+                if utils.draw_icon_button('SinglePacketSelected', ICON_FA_LOCATION_DOT, { selectedButtonSize, 0 }) then
+                    tracker.send_single_packet(entity.id)
+                end
+                if imgui.IsItemHovered() then
+                    imgui.SetTooltip('Single packet')
+                end
+                imgui.SameLine(0, 4)
+                if utils.draw_icon_button('SingleWidescanSelected', ICON_FA_MAGNIFYING_GLASS_LOCATION, { selectedButtonSize, 0 }) then
+                    tracker.send_widescan(entity.id)
+                end
+                if imgui.IsItemHovered() then
+                    imgui.SetTooltip('Single widescan')
+                end
+                imgui.SameLine(0, 4)
+                imgui.Text(utils.clamp_text_to_width(selectedLabel, selectedLabelWidth))
+                if imgui.IsItemHovered() then
+                    imgui.SetTooltip(selectedLabel)
+                end
                 imgui.Spacing()
 
                 -- Alias
@@ -552,17 +618,6 @@ local function draw_map_tab_tracker()
                     tracker.update_entity(entity.id, { timeout = timeout[1] })
                 end
                 imgui.ShowHelp('After this many seconds without position updates, remove entity from map. Set to 0 to never timeout.', true)
-
-                imgui.Spacing()
-
-                -- Packet controls for selected entity
-                if imgui.Button('Single packet', { -1, 0 }) then
-                    tracker.send_single_packet(entity.id)
-                end
-
-                if imgui.Button('Single widescan', { -1, 0 }) then
-                    tracker.send_widescan(entity.id)
-                end
             end
 
             imgui.EndTabItem()
