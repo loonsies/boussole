@@ -10,6 +10,7 @@ local utils = require('src.utils')
 local tracker = require('src.tracker')
 local controls = require('src.overlays.controls')
 local texture = require('src.texture')
+local custom_points = require('src.overlays.custom_points')
 local d3d8 = require('d3d8')
 local ffi = require('ffi')
 
@@ -828,6 +829,283 @@ local function draw_display_tab()
     imgui.Spacing()
 end
 
+-- Persistent drag-source state
+local drag_state = nil
+
+local function draw_points_tab()
+    local function aligned_menu_item(icon, text)
+        local curX, curY = imgui.GetCursorPos()
+
+        -- Transparent selectable for interaction and layout sizing
+        imgui.PushStyleColor(ImGuiCol_Text, { 0, 0, 0, 0 })
+        local clicked = imgui.Selectable(icon .. '    ' .. text .. '##' .. text, false, ImGuiSelectableFlags_SpanAvailWidth)
+        imgui.PopStyleColor()
+
+        if clicked then
+            imgui.CloseCurrentPopup()
+        end
+
+        local endX, endY = imgui.GetCursorPos()
+
+        imgui.SetCursorPos({ curX, curY })
+        imgui.Text(icon)
+        imgui.SameLine(34) -- Fixed 34 pixel offset from icon (why isnt that built in?)
+        imgui.Text(text)
+
+        imgui.SetCursorPos({ endX, endY })
+        imgui.Dummy({ 0, 0 })
+
+        return clicked
+    end
+
+    imgui.SeparatorText(ICON_FA_LOCATION_DOT .. ' Custom Points')
+    imgui.Spacing()
+
+    local function parse_map_key(mk)
+        local z, f = mk:match('^(%d+)_(%d+)$')
+        return tonumber(z), tonumber(f)
+    end
+
+    local currentMapKey = custom_points.get_map_key(boussole.manualZoneId[1], boussole.manualFloorId[1])
+
+    -- Build a sorted list of map keys, current map always first
+    local mapKeys = {}
+    for mk in pairs(custom_points.data) do
+        table.insert(mapKeys, mk)
+    end
+    table.sort(mapKeys, function (a, b)
+        if a == currentMapKey then return true end
+        if b == currentMapKey then return false end
+        return a < b
+    end)
+
+    if #mapKeys == 0 then
+        imgui.TextDisabled('No custom points yet.')
+        imgui.Spacing()
+        imgui.TextDisabled('Double right-click on the map to add a point.')
+        return
+    end
+
+    for _, mapKey in ipairs(mapKeys) do
+        local points = custom_points.data[mapKey]
+        if type(points) == 'table' then
+            local isCurrent       = (mapKey == currentMapKey)
+            local zoneId, floorId = parse_map_key(mapKey)
+            local nodeLabel       = isCurrent
+                and string.format(ICON_FA_MAP_LOCATION .. ' Current map [%s]', mapKey)
+                or string.format(ICON_FA_MAP .. ' Map [%s]', mapKey)
+            local nodeFlags       = isCurrent and ImGuiTreeNodeFlags_DefaultOpen or 0
+
+            if imgui.TreeNodeEx(nodeLabel .. '##cpmap_' .. mapKey, nodeFlags) then
+                -- Map context menu
+                if imgui.BeginPopupContextItem('ctx_map_' .. mapKey) then
+                    if aligned_menu_item(ICON_FA_FOLDER_PLUS, 'New Folder') then
+                        custom_points.create_folder(zoneId, floorId, nil)
+                    end
+                    if aligned_menu_item(ICON_FA_CLIPBOARD, 'Paste') then
+                        custom_points.paste_item(zoneId, floorId, nil)
+                    end
+                    imgui.EndPopup()
+                end
+
+                if #points == 0 then
+                    imgui.TextDisabled('  No points on this map.')
+                else
+                    local pendingMove   = nil
+                    local pendingEdit   = nil
+                    local pendingDelete = nil
+
+                    local function draw_item_list(itemList, parentId)
+                        for i, entry in ipairs(itemList) do
+                            imgui.PushID('cp_' .. entry.id)
+
+                            local label = (entry.name ~= nil and entry.name ~= '') and entry.name or '(unnamed)'
+                            local isFolder = (entry.type == 'folder')
+
+                            -- Visibility toggle button
+                            local eyeIcon = (entry.visible ~= false) and ICON_FA_EYE or ICON_FA_EYE_SLASH
+                            local colorVec = (entry.visible ~= false) and { 1, 1, 1, 1 } or { 0.5, 0.5, 0.5, 1.0 }
+
+                            imgui.PushStyleColor(ImGuiCol_Text, colorVec)
+
+                            -- Draw visibility toggle
+                            if imgui.Selectable(eyeIcon .. '##vis_' .. entry.id, false, 0, { 20, 0 }) then
+                                entry.visible = (entry.visible == false) and true or false
+                                custom_points.save_custom_points()
+                            end
+                            imgui.SameLine()
+
+                            -- Draw folder or point
+                            local nodeOpen = false
+                            if isFolder then
+                                local flags = bit.bor(
+                                    entry.isExpanded and ImGuiTreeNodeFlags_DefaultOpen or 0,
+                                    ImGuiTreeNodeFlags_OpenOnArrow, ImGuiTreeNodeFlags_OpenOnDoubleClick,
+                                    ImGuiTreeNodeFlags_SpanAvailWidth
+                                )
+                                nodeOpen = imgui.TreeNodeEx(ICON_FA_FOLDER .. '  ' .. label .. '##' .. entry.id, flags)
+                                if entry.isExpanded ~= nodeOpen then
+                                    entry.isExpanded = nodeOpen
+                                    custom_points.save_custom_points()
+                                end
+                            else
+                                local curX, curY = imgui.GetCursorScreenPos()
+                                imgui.Selectable('    ' .. label .. '##' .. entry.id, false, ImGuiSelectableFlags_SpanAvailWidth)
+                                local drawList = imgui.GetWindowDrawList()
+                                local color = utils.rgb_to_abgr(entry.color)
+                                local iconSize = 6
+                                custom_points.draw_icon(drawList, curX + 10, curY + imgui.GetTextLineHeight() / 2, entry.iconShape or 1, iconSize, color, entry.imageName, entry.applyColor)
+                            end
+                            imgui.PopStyleColor()
+
+                            -- Context menu
+                            if imgui.BeginPopupContextItem('ctx_' .. entry.id) then
+                                imgui.TextDisabled(label)
+                                imgui.Separator()
+                                if isFolder then
+                                    if aligned_menu_item(ICON_FA_FOLDER_PLUS, 'New folder') then
+                                        custom_points.create_folder(zoneId, floorId, entry.id)
+                                    end
+                                    if aligned_menu_item(ICON_FA_FILE_PEN, 'Rename') then
+                                        pendingEdit = { zoneId = zoneId, floorId = floorId, entry = entry, isFolder = true }
+                                    end
+                                    if aligned_menu_item(ICON_FA_CLIPBOARD, 'Paste') then
+                                        custom_points.paste_item(zoneId, floorId, entry.id)
+                                    end
+                                    imgui.Separator()
+                                end
+
+                                if not isFolder then
+                                    if aligned_menu_item(ICON_FA_FILE_PEN, 'Edit') then
+                                        pendingEdit = { zoneId = zoneId, floorId = floorId, entry = entry }
+                                    end
+                                end
+
+                                if aligned_menu_item(ICON_FA_COPY, 'Copy') then
+                                    custom_points.copy_item(entry)
+                                end
+                                if aligned_menu_item(ICON_FA_TRASH, 'Delete') then
+                                    pendingDelete = { mapKey = mapKey, entry = entry }
+                                end
+                                imgui.EndPopup()
+                            end
+
+                            -- Drag Source
+                            if imgui.BeginDragDropSource(ImGuiDragDropFlags_SourceNoDisableHover) then
+                                drag_state = { id = entry.id, mapKey = mapKey }
+                                if isFolder then
+                                    imgui.Text(ICON_FA_FOLDER .. '  ' .. label)
+                                else
+                                    local curX, curY = imgui.GetCursorScreenPos()
+                                    imgui.Text('    ' .. label)
+                                    local drawList = imgui.GetWindowDrawList()
+                                    local color = utils.rgb_to_abgr(entry.color)
+                                    local iconSize = 6
+                                    custom_points.draw_icon(drawList, curX + 10, curY + imgui.GetTextLineHeight() / 2, entry.iconShape or 1, iconSize, color, entry.imageName, entry.applyColor)
+                                end
+                                imgui.EndDragDropSource()
+                            end
+
+                            -- Drag target
+                            if drag_state ~= nil and drag_state.mapKey == mapKey and drag_state.id ~= entry.id then
+                                -- We check both exact item hover and allow block
+                                if imgui.IsItemHovered(128) then
+                                    local winX, winY = imgui.GetWindowPos()
+                                    local itemMinX, itemMinY = imgui.GetItemRectMin()
+                                    local itemMaxX, itemMaxY = imgui.GetItemRectMax()
+                                    local _, mousePosY = imgui.GetMousePos()
+
+                                    local rmin = { winX + 15, itemMinY }
+                                    local rmax = { winX + imgui.GetWindowWidth() - 15, itemMaxY }
+
+                                    local dropAction = 'after'
+
+                                    if isFolder then
+                                        local third = (itemMaxY - itemMinY) / 3
+                                        if mousePosY < itemMinY + third then
+                                            dropAction = 'before'
+                                            rmin[2] = itemMinY - 3
+                                            rmax[2] = itemMinY - 1
+                                        elseif mousePosY > itemMaxY - third then
+                                            dropAction = 'after'
+                                            rmin[2] = itemMaxY + 1
+                                            rmax[2] = itemMaxY + 3
+                                        else
+                                            dropAction = 'into'
+                                        end
+                                    else
+                                        local half = (itemMaxY - itemMinY) / 2
+                                        if mousePosY < itemMinY + half then
+                                            dropAction = 'before'
+                                            rmin[2] = itemMinY - 3
+                                            rmax[2] = itemMinY - 1
+                                        else
+                                            dropAction = 'after'
+                                            rmin[2] = itemMaxY + 1
+                                            rmax[2] = itemMaxY + 3
+                                        end
+                                    end
+
+                                    imgui.GetWindowDrawList():AddRectFilled(rmin, rmax, 0x8800FF00)
+
+                                    if imgui.IsMouseReleased(0) then
+                                        pendingMove = { mapKey = mapKey, from = drag_state.id, to = entry.id, action = dropAction }
+                                    end
+                                end
+                            end
+
+                            -- Recursive children
+                            if isFolder and nodeOpen then
+                                if entry.children and #entry.children > 0 then
+                                    draw_item_list(entry.children, entry.id)
+                                else
+                                    imgui.TextDisabled('    (empty)')
+                                end
+
+                                imgui.TreePop()
+                            end
+
+                            imgui.PopID()
+                        end
+                    end
+
+                    draw_item_list(points, nil)
+
+                    -- Global catch for clearing drag state when mouse is released anywhere
+                    if drag_state ~= nil and drag_state.mapKey == mapKey and imgui.IsMouseReleased(0) then
+                        drag_state = nil
+                    end
+
+                    -- Apply deferred operations now that the loop has finished
+                    if pendingMove then
+                        custom_points.move_item(pendingMove.mapKey, pendingMove.from, pendingMove.to, pendingMove.action)
+                        drag_state = nil
+                    end
+
+                    if pendingEdit then
+                        if pendingEdit.isFolder then
+                            custom_points.open_edit_folder_popup(pendingEdit.zoneId, pendingEdit.floorId, pendingEdit.entry.id, pendingEdit.entry)
+                        else
+                            custom_points.open_edit_popup(pendingEdit.zoneId, pendingEdit.floorId, pendingEdit.entry.id, pendingEdit.entry)
+                        end
+                        pendingEdit = nil
+                    end
+                    if pendingDelete then
+                        local z, f                          = parse_map_key(pendingDelete.mapKey)
+                        custom_points.popup_state.zoneId    = z
+                        custom_points.popup_state.floorId   = f
+                        custom_points.popup_state.pointId   = pendingDelete.entry.id
+                        custom_points.popup_state.imageName = { pendingDelete.entry.imageName or '' }
+                        custom_points.delete_point()
+                    end
+                end
+
+                imgui.TreePop()
+            end
+        end
+    end
+end
+
 local function draw_misc_tab(selZoneId)
     imgui.SeparatorText(ICON_FA_ROUTE .. ' Map redirects')
 
@@ -1388,6 +1666,12 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
 
                 if imgui.BeginTabItem('Misc') then
                     draw_misc_tab(selZoneId)
+                    imgui.EndTabItem()
+                end
+
+
+                if imgui.BeginTabItem('Custom Points') then
+                    draw_points_tab()
                     imgui.EndTabItem()
                 end
 

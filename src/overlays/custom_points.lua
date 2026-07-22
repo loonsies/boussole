@@ -1,6 +1,7 @@
 local custom_points = {}
 
 local imgui = require('imgui')
+local chat = require('chat')
 local utils = require('src.utils')
 local settings = require('settings')
 local tooltip = require('src.overlays.tooltip')
@@ -9,6 +10,92 @@ local ffi = require('ffi')
 local d3d8 = require('d3d8')
 
 local C = ffi.C
+
+-- Check if a table uses only string/mixed keys with no integer sequence part (old dict format)
+local function is_old_dict_format(t)
+    if type(t) ~= 'table' then return false end
+    if #t > 0 then return false end      -- has sequence part, already an array
+    for _ in pairs(t) do return true end -- non empty with no seq keys, dict
+    return false
+end
+
+-- Convert an old { pointId -> point } dict to an ordered array with the id embedded
+local function dict_to_array(dict)
+    local arr = {}
+    for id, point in pairs(dict) do
+        local entry = {}
+        for k, v in pairs(point) do entry[k] = v end
+        entry.id = id
+        table.insert(arr, entry)
+    end
+    return arr
+end
+
+-- Helper to recursively flatten the tree for drawing and hit detection.
+-- Computes the full path (e.g. "Folder1/Folder2/PointName") for tooltips.
+local function flatten_visible_points(items, current_path, parent_visible, out_list)
+    for _, item in ipairs(items) do
+        local is_visible = parent_visible and (item.visible ~= false)
+        local item_name = (item.name ~= nil and item.name ~= '') and item.name or '(unnamed)'
+        local full_path = current_path == '' and item_name or (current_path .. '/' .. item_name)
+
+        if item.type == 'folder' then
+            if item.children then
+                flatten_visible_points(item.children, full_path, is_visible, out_list)
+            end
+        else
+            if is_visible then
+                out_list[#out_list + 1] = {
+                    point = item,
+                    fullPath = full_path
+                }
+            end
+        end
+    end
+end
+
+-- Helper to recursively find an item and its containing list
+local function find_item_and_parent(items, id)
+    for i, item in ipairs(items) do
+        if item.id == id then
+            return item, items, i
+        end
+        if item.type == 'folder' and item.children then
+            local found_item, found_parent, found_index = find_item_and_parent(item.children, id)
+            if found_item then
+                return found_item, found_parent, found_index
+            end
+        end
+    end
+    return nil, nil, nil
+end
+
+-- Helper to clone a table deeply and regenerate UUIDs
+local function deep_clone_and_reid(item, zoneId, floorId)
+    local clone = {}
+    for k, v in pairs(item) do
+        if type(v) == 'table' then
+            if k == 'children' then
+                clone.children = {}
+                for _, child in ipairs(v) do
+                    table.insert(clone.children, deep_clone_and_reid(child, zoneId, floorId))
+                end
+            else
+                -- clone array like color
+                local arr_clone = {}
+                for ak, av in pairs(v) do arr_clone[ak] = av end
+                clone[k] = arr_clone
+            end
+        else
+            clone[k] = v
+        end
+    end
+    -- Generate a new ID to avoid collisions
+    local x = item.mapX and math.floor(item.mapX) or 0
+    local y = item.mapY and math.floor(item.mapY) or 0
+    clone.id = string.format('%d_%d_%d_%d_%d_%04d', os.time(), zoneId, floorId, x, y, math.random(0, 9999))
+    return clone
+end
 
 -- Icon shapes
 custom_points.ICON_SHAPES = {
@@ -66,6 +153,9 @@ function custom_points.load_custom_points()
     else
         custom_points.data = {}
     end
+
+    -- upgrade any per-map dict entries left from the old format
+    custom_points.upgrade_from_dict_format()
 end
 
 function custom_points.migrate_from_config(config)
@@ -80,10 +170,19 @@ function custom_points.migrate_from_config(config)
             if not custom_points.data[mapKey] then
                 custom_points.data[mapKey] = {}
             end
+            -- Build a set of existing IDs to avoid duplicates
+            local existingIds = {}
+            for _, entry in ipairs(custom_points.data[mapKey]) do
+                existingIds[entry.id] = true
+            end
             for pointId, point in pairs(points) do
                 hadPoints = true
-                if custom_points.data[mapKey][pointId] == nil then
-                    custom_points.data[mapKey][pointId] = point
+                if not existingIds[pointId] then
+                    local entry = {}
+                    for k, v in pairs(point) do entry[k] = v end
+                    entry.id = pointId
+                    table.insert(custom_points.data[mapKey], entry)
+                    existingIds[pointId] = true
                 end
             end
         end
@@ -181,23 +280,27 @@ function custom_points.find_point_at_position(zoneId, floorId, screenX, screenY,
 
     if not points then return nil end
 
-    for pointId, point in pairs(points) do
+    local visible_points = {}
+    flatten_visible_points(points, '', true, visible_points)
+
+    for _, entryData in ipairs(visible_points) do
+        local entry = entryData.point
         -- Convert map coordinates to texture pixel coordinates
-        local texX = (point.mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-        local texY = (point.mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+        local texX = (entry.mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+        local texY = (entry.mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
 
         -- Convert to screen coordinates
         local pointScreenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
         local pointScreenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
 
         -- Use square hitbox based on point size
-        local pointSize = point.size or 8
+        local pointSize = entry.size or 8
         local halfSize = pointSize
 
         -- Check if click is within square bounds
         if screenX >= pointScreenX - halfSize and screenX <= pointScreenX + halfSize and
             screenY >= pointScreenY - halfSize and screenY <= pointScreenY + halfSize then
-            return { id = pointId, point = point }
+            return { id = entry.id, point = entry, fullPath = entryData.fullPath }
         end
     end
 
@@ -208,6 +311,7 @@ end
 function custom_points.open_add_popup(zoneId, floorId, mapX, mapY)
     custom_points.popup_state.open = true
     custom_points.popup_state.editing = false
+    custom_points.popup_state.isFolder = false
     custom_points.popup_state.zoneId = zoneId
     custom_points.popup_state.floorId = floorId
     custom_points.popup_state.mapX = mapX
@@ -226,6 +330,7 @@ end
 function custom_points.open_edit_popup(zoneId, floorId, pointId, point)
     custom_points.popup_state.open = true
     custom_points.popup_state.editing = true
+    custom_points.popup_state.isFolder = false
     custom_points.popup_state.zoneId = zoneId
     custom_points.popup_state.floorId = floorId
     custom_points.popup_state.mapX = point.mapX
@@ -240,6 +345,17 @@ function custom_points.open_edit_popup(zoneId, floorId, pointId, point)
     custom_points.popup_state.applyColor = { point.applyColor or false }
 end
 
+-- Open popup to edit an existing folder
+function custom_points.open_edit_folder_popup(zoneId, floorId, folderId, folder)
+    custom_points.popup_state.open = true
+    custom_points.popup_state.editing = true
+    custom_points.popup_state.isFolder = true
+    custom_points.popup_state.zoneId = zoneId
+    custom_points.popup_state.floorId = floorId
+    custom_points.popup_state.pointId = folderId
+    custom_points.popup_state.name = { folder.name or '' }
+end
+
 -- Save point to config
 function custom_points.save_point()
     local mapKey = custom_points.get_map_key(custom_points.popup_state.zoneId, custom_points.popup_state.floorId)
@@ -250,44 +366,62 @@ function custom_points.save_point()
 
     local pointId = custom_points.popup_state.pointId
     if not pointId then
+        -- New point: generate id and append to the end of the array
         pointId = custom_points.generate_id(
             custom_points.popup_state.zoneId,
             custom_points.popup_state.floorId,
             custom_points.popup_state.mapX,
             custom_points.popup_state.mapY
         )
-    end
-
-    -- If editing and icon shape or imageName changed, clear the texture cache
-    if custom_points.popup_state.editing then
-        local existingPoint = custom_points.data[mapKey][pointId]
-        if existingPoint then
-            if existingPoint.iconShape ~= custom_points.popup_state.iconShape[1] or
-                existingPoint.imageName ~= custom_points.popup_state.imageName[1] then
-                -- Clear old image cache
-                if existingPoint.imageName then
-                    custom_points.clear_texture_cache(existingPoint.imageName)
+        table.insert(custom_points.data[mapKey], {
+            id         = pointId,
+            type       = 'point',
+            visible    = true,
+            mapX       = custom_points.popup_state.mapX,
+            mapY       = custom_points.popup_state.mapY,
+            name       = custom_points.popup_state.name[1],
+            note       = custom_points.popup_state.note[1],
+            iconShape  = custom_points.popup_state.iconShape[1],
+            color      = {
+                custom_points.popup_state.color[1],
+                custom_points.popup_state.color[2],
+                custom_points.popup_state.color[3],
+                custom_points.popup_state.color[4]
+            },
+            size       = custom_points.popup_state.size[1],
+            imageName  = custom_points.popup_state.imageName[1],
+            applyColor = custom_points.popup_state.applyColor[1]
+        })
+    else
+        -- Edit existing point: find it by id and update in place
+        local points = custom_points.data[mapKey]
+        local entry = find_item_and_parent(points, pointId)
+        if entry then
+            entry.name = custom_points.popup_state.name[1]
+            if not custom_points.popup_state.isFolder then
+                -- Clear texture cache if icon shape or image changed
+                if entry.iconShape ~= custom_points.popup_state.iconShape[1] or
+                    entry.imageName ~= custom_points.popup_state.imageName[1] then
+                    if entry.imageName then
+                        custom_points.clear_texture_cache(entry.imageName)
+                    end
                 end
+                entry.mapX       = custom_points.popup_state.mapX
+                entry.mapY       = custom_points.popup_state.mapY
+                entry.note       = custom_points.popup_state.note[1]
+                entry.iconShape  = custom_points.popup_state.iconShape[1]
+                entry.color      = {
+                    custom_points.popup_state.color[1],
+                    custom_points.popup_state.color[2],
+                    custom_points.popup_state.color[3],
+                    custom_points.popup_state.color[4]
+                }
+                entry.size       = custom_points.popup_state.size[1]
+                entry.imageName  = custom_points.popup_state.imageName[1]
+                entry.applyColor = custom_points.popup_state.applyColor[1]
             end
         end
     end
-
-    custom_points.data[mapKey][pointId] = {
-        mapX = custom_points.popup_state.mapX,
-        mapY = custom_points.popup_state.mapY,
-        name = custom_points.popup_state.name[1],
-        note = custom_points.popup_state.note[1],
-        iconShape = custom_points.popup_state.iconShape[1],
-        color = {
-            custom_points.popup_state.color[1],
-            custom_points.popup_state.color[2],
-            custom_points.popup_state.color[3],
-            custom_points.popup_state.color[4]
-        },
-        size = custom_points.popup_state.size[1],
-        imageName = custom_points.popup_state.imageName[1],
-        applyColor = custom_points.popup_state.applyColor[1]
-    }
 
     custom_points.save_custom_points()
     custom_points.popup_state.open = false
@@ -296,13 +430,17 @@ end
 -- Delete point from config
 function custom_points.delete_point()
     local mapKey = custom_points.get_map_key(custom_points.popup_state.zoneId, custom_points.popup_state.floorId)
+    local points = custom_points.data[mapKey]
 
-    if custom_points.data[mapKey] and custom_points.popup_state.pointId then
+    if points and custom_points.popup_state.pointId then
         -- Clear texture cache if it exists
         custom_points.clear_texture_cache(custom_points.popup_state.imageName[1])
 
-        custom_points.data[mapKey][custom_points.popup_state.pointId] = nil
-        custom_points.save_custom_points()
+        local entry, parent_list, index = find_item_and_parent(points, custom_points.popup_state.pointId)
+        if parent_list and index then
+            table.remove(parent_list, index)
+            custom_points.save_custom_points()
+        end
     end
 
     custom_points.popup_state.open = false
@@ -412,8 +550,13 @@ function custom_points.draw(mapData, windowPosX, windowPosY, contentMinX, conten
     local drawList = imgui.GetWindowDrawList()
     local mousePosX, mousePosY = imgui.GetMousePos()
 
-    for pointId, point in pairs(points) do
+    local visible_points = {}
+    flatten_visible_points(points, '', true, visible_points)
+
+    for _, entryData in ipairs(visible_points) do
+        local point = entryData.point
         -- Convert map coordinates to texture pixel coordinates
+        local texX, texY
         if mapData.entry._isCustomMap then
             texX = (point.mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
             texY = (point.mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
@@ -434,11 +577,11 @@ function custom_points.draw(mapData, windowPosX, windowPosY, contentMinX, conten
 
         if isHovered then
             local color = utils.rgb_to_abgr(point.color)
-            if point.name and point.name ~= '' then
-                tooltip.add_line(point.name, color)
+            if entryData.fullPath and entryData.fullPath ~= '' then
+                tooltip.add_line(entryData.fullPath, color)
             end
             if point.note and point.note ~= '' then
-                if point.name and point.name ~= '' then
+                if entryData.fullPath and entryData.fullPath ~= '' then
                     tooltip.add_separator()
                 end
                 for line in tostring(point.note):gmatch('[^\r\n]+') do
@@ -459,10 +602,13 @@ function custom_points.draw_popup()
 
     imgui.OpenPopup('Custom point')
 
-    local size = custom_points.popup_state.editing and { 300, 515 } or { 300, 430 }
+    local size = custom_points.popup_state.editing and { 300, 550 } or { 300, 430 }
+    if custom_points.popup_state.isFolder then
+        size = { 300, 200 }
+    end
     imgui.SetNextWindowSize(size, ImGuiCond_OnAppearing)
     if imgui.BeginPopupModal('Custom point', nil, bit.bor(ImGuiWindowFlags_NoResize, ImGuiWindowFlags_NoScrollWithMouse)) then
-        imgui.Text(custom_points.popup_state.editing and 'Edit custom point' or 'Add custom point')
+        imgui.Text(custom_points.popup_state.editing and (custom_points.popup_state.isFolder and 'Rename folder' or 'Edit custom point') or 'Add custom point')
         imgui.Separator()
         imgui.Spacing()
 
@@ -472,55 +618,57 @@ function custom_points.draw_popup()
         imgui.InputText('##Name', custom_points.popup_state.name, 128)
         imgui.Spacing()
 
-        -- Note input
-        imgui.Text('Note:')
-        imgui.SetNextItemWidth(-1)
-        imgui.InputTextMultiline('##Note', custom_points.popup_state.note, 512, { -1, 80 })
-        imgui.Spacing()
+        if not custom_points.popup_state.isFolder then
+            -- Note input
+            imgui.Text('Note:')
+            imgui.SetNextItemWidth(-1)
+            imgui.InputTextMultiline('##Note', custom_points.popup_state.note, 512, { -1, 80 })
+            imgui.Spacing()
 
-        -- Icon shape combo
-        imgui.Text('Icon Shape:')
-        imgui.SetNextItemWidth(-1)
-        local currentShape = custom_points.ICON_SHAPES[custom_points.popup_state.iconShape[1]] or 'Dot'
-        if imgui.BeginCombo('##IconShape', currentShape) then
-            for i, shape in ipairs(custom_points.ICON_SHAPES) do
-                local isSelected = (custom_points.popup_state.iconShape[1] == i)
-                if imgui.Selectable(shape, isSelected) then
-                    custom_points.popup_state.iconShape[1] = i
+            -- Icon shape combo
+            imgui.Text('Icon Shape:')
+            imgui.SetNextItemWidth(-1)
+            local currentShape = custom_points.ICON_SHAPES[custom_points.popup_state.iconShape[1]] or 'Dot'
+            if imgui.BeginCombo('##IconShape', currentShape) then
+                for i, shape in ipairs(custom_points.ICON_SHAPES) do
+                    local isSelected = (custom_points.popup_state.iconShape[1] == i)
+                    if imgui.Selectable(shape, isSelected) then
+                        custom_points.popup_state.iconShape[1] = i
+                    end
+                end
+                imgui.EndCombo()
+            end
+            imgui.Spacing()
+
+            -- Image Name input (only show for Custom Image shape)
+            if custom_points.popup_state.iconShape[1] == 6 then
+                imgui.Text('Image Name:')
+                imgui.SetNextItemWidth(-1)
+                imgui.InputText('##ImageName', custom_points.popup_state.imageName, 128)
+                imgui.Spacing()
+
+                -- Apply color checkbox for custom images
+                imgui.Checkbox('Apply Color Tint', custom_points.popup_state.applyColor)
+                imgui.Spacing()
+            end
+
+            -- Size input
+            imgui.Text('Size:')
+            imgui.SetNextItemWidth(-1)
+            if imgui.InputInt('##Size', custom_points.popup_state.size, 1, 2) then
+                if custom_points.popup_state.size[1] < 4 then
+                    custom_points.popup_state.size[1] = 4
+                elseif custom_points.popup_state.size[1] > 20 then
+                    custom_points.popup_state.size[1] = 20
                 end
             end
-            imgui.EndCombo()
-        end
-        imgui.Spacing()
-
-        -- Image Name input (only show for Custom Image shape)
-        if custom_points.popup_state.iconShape[1] == 6 then
-            imgui.Text('Image Name:')
-            imgui.SetNextItemWidth(-1)
-            imgui.InputText('##ImageName', custom_points.popup_state.imageName, 128)
             imgui.Spacing()
 
-            -- Apply color checkbox for custom images
-            imgui.Checkbox('Apply Color Tint', custom_points.popup_state.applyColor)
+            -- Color picker
+            imgui.Text('Color:')
+            imgui.ColorEdit4('##Color', custom_points.popup_state.color)
             imgui.Spacing()
         end
-
-        -- Size input
-        imgui.Text('Size:')
-        imgui.SetNextItemWidth(-1)
-        if imgui.InputInt('##Size', custom_points.popup_state.size, 1, 2) then
-            if custom_points.popup_state.size[1] < 4 then
-                custom_points.popup_state.size[1] = 4
-            elseif custom_points.popup_state.size[1] > 20 then
-                custom_points.popup_state.size[1] = 20
-            end
-        end
-        imgui.Spacing()
-
-        -- Color picker
-        imgui.Text('Color:')
-        imgui.ColorEdit4('##Color', custom_points.popup_state.color)
-        imgui.Spacing()
 
         imgui.Separator()
         imgui.Spacing()
@@ -535,16 +683,135 @@ function custom_points.draw_popup()
         if imgui.Button('Cancel', { buttonWidth, 0 }) then
             custom_points.popup_state.open = false
         end
-
+        -- Delete button
         if custom_points.popup_state.editing then
-            imgui.SameLine()
-            if imgui.Button('Delete', { buttonWidth, 0 }) then
+            local text = custom_points.popup_state.isFolder and 'Delete folder' or 'Delete point'
+            if imgui.Button(text, { 140, 24 }) then
                 custom_points.delete_point()
             end
         end
 
         imgui.EndPopup()
     end
+end
+
+function custom_points.upgrade_from_dict_format()
+    local needsSave = false
+    for mapKey, points in pairs(custom_points.data) do
+        if is_old_dict_format(points) then
+            custom_points.data[mapKey] = dict_to_array(points)
+            needsSave = true
+        end
+    end
+    if needsSave then
+        custom_points.save_custom_points()
+    end
+end
+
+-- Move a point from sourceId to a target position relative to targetId
+-- dropAction: 'before', 'after', or 'into' (when targetId is a folder)
+function custom_points.move_item(mapKey, sourceId, targetId, dropAction)
+    local points = custom_points.data[mapKey]
+    if not points then return end
+    if sourceId == targetId then return end
+
+    local sourceItem, sourceParent, sourceIndex = find_item_and_parent(points, sourceId)
+    if not sourceItem then return end
+
+    -- Remove from old position
+    table.remove(sourceParent, sourceIndex)
+
+    local targetItem, targetParent, targetIndex = find_item_and_parent(points, targetId)
+    if not targetItem then
+        -- fallback insert at root
+        table.insert(points, sourceItem)
+        custom_points.save_custom_points()
+        return
+    end
+
+    if dropAction == 'into' and targetItem.type == 'folder' then
+        targetItem.children = targetItem.children or {}
+        table.insert(targetItem.children, sourceItem)
+    elseif dropAction == 'before' then
+        table.insert(targetParent, targetIndex, sourceItem)
+    else -- 'after'
+        table.insert(targetParent, targetIndex + 1, sourceItem)
+    end
+
+    custom_points.save_custom_points()
+end
+
+-- Create a new folder
+function custom_points.create_folder(zoneId, floorId, parentId)
+    local mapKey = custom_points.get_map_key(zoneId, floorId)
+    if not custom_points.data[mapKey] then
+        custom_points.data[mapKey] = {}
+    end
+    local points = custom_points.data[mapKey]
+
+    local folder = {
+        id = string.format('%d_%d_%d_%04d_folder', os.time(), zoneId, floorId, math.random(0, 9999)),
+        type = 'folder',
+        name = 'New Folder',
+        visible = true,
+        isExpanded = true,
+        children = {}
+    }
+
+    if parentId then
+        local targetItem = find_item_and_parent(points, parentId)
+        if targetItem and targetItem.type == 'folder' then
+            targetItem.children = targetItem.children or {}
+            table.insert(targetItem.children, folder)
+        else
+            table.insert(points, folder)
+        end
+    else
+        table.insert(points, folder)
+    end
+
+    custom_points.save_custom_points()
+end
+
+-- Global clipboard copy
+function custom_points.copy_item(item)
+    if not item then return end
+    local j = json.encode(item)
+    imgui.SetClipboardText(j)
+end
+
+-- Global clipboard paste
+function custom_points.paste_item(zoneId, floorId, targetFolderId)
+    local j = imgui.GetClipboardText()
+    if not j or j == '' then return end
+
+    local success, item = pcall(json.decode, j)
+    if not success or type(item) ~= 'table' or not item.id then
+        print(chat.header('boussole'):append(chat.error('Clipboard content is not a valid custom point or folder.')))
+        return
+    end
+
+    local mapKey = custom_points.get_map_key(zoneId, floorId)
+    if not custom_points.data[mapKey] then
+        custom_points.data[mapKey] = {}
+    end
+    local points = custom_points.data[mapKey]
+
+    local clone = deep_clone_and_reid(item, zoneId, floorId)
+
+    if targetFolderId then
+        local targetItem = find_item_and_parent(points, targetFolderId)
+        if targetItem and targetItem.type == 'folder' then
+            targetItem.children = targetItem.children or {}
+            table.insert(targetItem.children, clone)
+        else
+            table.insert(points, clone)
+        end
+    else
+        table.insert(points, clone)
+    end
+
+    custom_points.save_custom_points()
 end
 
 return custom_points
