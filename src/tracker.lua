@@ -493,10 +493,6 @@ function tracker.scan_nearby_entities(force)
                     local isTracked = trackedEntities[id] ~= nil
                     local isAlive = kind ~= 'mob' or entity.HPPercent == nil or entity.HPPercent > 0
 
-                    if index == 710 then
-                        print(chat.header('boussole'):append(chat.message(string.format('Debug: Entity ID %X, Index %d, Kind %s, Tracked: %s, Enabled: %s, Alive: %s', id, index, kind or 'nil', tostring(isTracked), tostring(kindEnabled), tostring(isAlive)))))
-                    end
-
                     if id > 0 and (kindEnabled or isTracked) and isAlive then
                         update_nearby_entity(id, index, kind)
                         set_active_entity(id, position, index, 'scan')
