@@ -459,7 +459,6 @@ function tracker.scan_nearby_entities(force)
     if not force and currentTime - lastNearbyEntityScan < nearbyEntityScanInterval then
         return
     end
-    print(chat.header('boussole'):append(chat.message('Scanning nearby entities...')))
     lastNearbyEntityScan = currentTime
 
     local config = boussole.config
