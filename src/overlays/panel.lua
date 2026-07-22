@@ -911,31 +911,34 @@ local function draw_points_tab()
                 if #points == 0 then
                     imgui.TextDisabled('  No points on this map.')
                 else
-                    local pendingMove   = nil
-                    local pendingEdit   = nil
-                    local pendingDelete = nil
+                    local pendingMove     = nil
+                    local pendingEdit     = nil
+                    local pendingDelete   = nil
+                    local pendingDrop     = nil
+                    local dropTargetRects = {}
 
-                    local function draw_item_list(itemList, parentId)
+                    local function draw_item_list(itemList, parentId, parentMasked)
                         for i, entry in ipairs(itemList) do
                             imgui.PushID('cp_' .. entry.id)
 
-                            local label = (entry.name ~= nil and entry.name ~= '') and entry.name or '(unnamed)'
+                            local label    = (entry.name ~= nil and entry.name ~= '') and entry.name or '(unnamed)'
                             local isFolder = (entry.type == 'folder')
 
-                            -- Visibility toggle button
-                            local eyeIcon = (entry.visible ~= false) and ICON_FA_EYE or ICON_FA_EYE_SLASH
-                            local colorVec = (entry.visible ~= false) and { 1, 1, 1, 1 } or { 0.5, 0.5, 0.5, 1.0 }
+                            -- Propagate masked state downward
+                            local isMasked = parentMasked or (entry.visible == false)
+                            local eyeIcon  = (entry.visible ~= false) and ICON_FA_EYE or ICON_FA_EYE_SLASH
+                            local colorVec = isMasked and { 0.5, 0.5, 0.5, 1.0 } or { 1, 1, 1, 1 }
 
                             imgui.PushStyleColor(ImGuiCol_Text, colorVec)
 
-                            -- Draw visibility toggle
+                            -- Visibility toggle
                             if imgui.Selectable(eyeIcon .. '##vis_' .. entry.id, false, 0, { 20, 0 }) then
                                 entry.visible = (entry.visible == false) and true or false
                                 custom_points.save_custom_points()
                             end
                             imgui.SameLine()
 
-                            -- Draw folder or point
+                            -- Main row widget
                             local nodeOpen = false
                             if isFolder then
                                 local flags = bit.bor(
@@ -952,10 +955,14 @@ local function draw_points_tab()
                                 local curX, curY = imgui.GetCursorScreenPos()
                                 imgui.Selectable('    ' .. label .. '##' .. entry.id, false, ImGuiSelectableFlags_SpanAvailWidth)
                                 local drawList = imgui.GetWindowDrawList()
-                                local color = utils.rgb_to_abgr(entry.color)
+                                local color    = utils.rgb_to_abgr(entry.color)
                                 local iconSize = 6
                                 custom_points.draw_icon(drawList, curX + 10, curY + imgui.GetTextLineHeight() / 2, entry.iconShape or 1, iconSize, color, entry.imageName, entry.applyColor)
                             end
+
+                            local rowMinX, rowMinY = imgui.GetItemRectMin()
+                            local rowMaxX, rowMaxY = imgui.GetItemRectMax()
+
                             imgui.PopStyleColor()
 
                             -- Context menu
@@ -974,13 +981,11 @@ local function draw_points_tab()
                                     end
                                     imgui.Separator()
                                 end
-
                                 if not isFolder then
                                     if aligned_menu_item(ICON_FA_FILE_PEN, 'Edit') then
                                         pendingEdit = { zoneId = zoneId, floorId = floorId, entry = entry }
                                     end
                                 end
-
                                 if aligned_menu_item(ICON_FA_COPY, 'Copy') then
                                     custom_points.copy_item(entry)
                                 end
@@ -990,7 +995,7 @@ local function draw_points_tab()
                                 imgui.EndPopup()
                             end
 
-                            -- Drag Source
+                            -- Drag source
                             if imgui.BeginDragDropSource(ImGuiDragDropFlags_SourceNoDisableHover) then
                                 drag_state = { id = entry.id, mapKey = mapKey }
                                 if isFolder then
@@ -999,69 +1004,41 @@ local function draw_points_tab()
                                     local curX, curY = imgui.GetCursorScreenPos()
                                     imgui.Text('    ' .. label)
                                     local drawList = imgui.GetWindowDrawList()
-                                    local color = utils.rgb_to_abgr(entry.color)
+                                    local color    = utils.rgb_to_abgr(entry.color)
                                     local iconSize = 6
                                     custom_points.draw_icon(drawList, curX + 10, curY + imgui.GetTextLineHeight() / 2, entry.iconShape or 1, iconSize, color, entry.imageName, entry.applyColor)
                                 end
                                 imgui.EndDragDropSource()
                             end
 
-                            -- Drag target
-                            if drag_state ~= nil and drag_state.mapKey == mapKey and drag_state.id ~= entry.id then
-                                -- We check both exact item hover and allow block
-                                if imgui.IsItemHovered(128) then
-                                    local winX, winY = imgui.GetWindowPos()
-                                    local itemMinX, itemMinY = imgui.GetItemRectMin()
-                                    local itemMaxX, itemMaxY = imgui.GetItemRectMax()
-                                    local _, mousePosY = imgui.GetMousePos()
-
-                                    local rmin = { winX + 15, itemMinY }
-                                    local rmax = { winX + imgui.GetWindowWidth() - 15, itemMaxY }
-
-                                    local dropAction = 'after'
-
-                                    if isFolder then
-                                        local third = (itemMaxY - itemMinY) / 3
-                                        if mousePosY < itemMinY + third then
-                                            dropAction = 'before'
-                                            rmin[2] = itemMinY - 3
-                                            rmax[2] = itemMinY - 1
-                                        elseif mousePosY > itemMaxY - third then
-                                            dropAction = 'after'
-                                            rmin[2] = itemMaxY + 1
-                                            rmax[2] = itemMaxY + 3
-                                        else
-                                            dropAction = 'into'
-                                        end
-                                    else
-                                        local half = (itemMaxY - itemMinY) / 2
-                                        if mousePosY < itemMinY + half then
-                                            dropAction = 'before'
-                                            rmin[2] = itemMinY - 3
-                                            rmax[2] = itemMinY - 1
-                                        else
-                                            dropAction = 'after'
-                                            rmin[2] = itemMaxY + 1
-                                            rmax[2] = itemMaxY + 3
-                                        end
-                                    end
-
-                                    imgui.GetWindowDrawList():AddRectFilled(rmin, rmax, 0x8800FF00)
-
-                                    if imgui.IsMouseReleased(0) then
-                                        pendingMove = { mapKey = mapKey, from = drag_state.id, to = entry.id, action = dropAction }
-                                    end
-                                end
+                            -- Register as drop candidate
+                            if drag_state ~= nil and drag_state.mapKey == mapKey then
+                                table.insert(dropTargetRects, {
+                                    entry     = entry,
+                                    isFolder  = isFolder,
+                                    isDragged = (drag_state.id == entry.id),
+                                    minY      = rowMinY,
+                                    maxY      = rowMaxY,
+                                })
                             end
 
-                            -- Recursive children
+                            -- Recurse into children
                             if isFolder and nodeOpen then
                                 if entry.children and #entry.children > 0 then
-                                    draw_item_list(entry.children, entry.id)
+                                    draw_item_list(entry.children, entry.id, isMasked)
                                 else
                                     imgui.TextDisabled('    (empty)')
+                                    if drag_state ~= nil and drag_state.mapKey == mapKey then
+                                        local eMinX, eMinY = imgui.GetItemRectMin()
+                                        local eMaxX, eMaxY = imgui.GetItemRectMax()
+                                        table.insert(dropTargetRects, {
+                                            entry              = entry,
+                                            isEmptyPlaceholder = true,
+                                            minY               = eMinY,
+                                            maxY               = eMaxY,
+                                        })
+                                    end
                                 end
-
                                 imgui.TreePop()
                             end
 
@@ -1069,19 +1046,103 @@ local function draw_points_tab()
                         end
                     end
 
-                    draw_item_list(points, nil)
+                    draw_item_list(points, nil, false)
 
-                    -- Global catch for clearing drag state when mouse is released anywhere
+                    if drag_state ~= nil and drag_state.mapKey == mapKey then
+                        local mousePosX, mousePosY = imgui.GetMousePos()
+                        local N = #dropTargetRects
+                        local pendingDrop = nil
+
+                        for i = 1, N do
+                            local r         = dropTargetRects[i]
+                            local prevR     = dropTargetRects[i - 1]
+                            local nextR     = dropTargetRects[i + 1]
+
+                            -- Calculate the exact midpoint of the gap to the adjacent items
+                            local gapBefore = prevR and (r.minY - prevR.maxY) or 4
+                            local gapAfter  = nextR and (nextR.minY - r.maxY) or 4
+
+                            local hoverMinY = r.minY - gapBefore / 2
+                            local hoverMaxY = r.maxY + gapAfter / 2
+
+                            if mousePosY >= hoverMinY and mousePosY < hoverMaxY then
+                                if r.isDragged then
+                                    -- Hovering over the item being dragged; hide indicator
+                                    break
+                                end
+
+                                local dropAction = 'after'
+                                local indicatorY = hoverMaxY
+                                local indicatorR = nil
+
+                                if r.isEmptyPlaceholder then
+                                    -- Hovering the (empty) text of a folder drops INTO the folder
+                                    dropAction = 'into'
+                                    indicatorY = nil
+                                    indicatorR = r
+                                elseif r.isFolder then
+                                    local third = (r.maxY - r.minY) / 3
+                                    if mousePosY < r.minY + third then
+                                        dropAction = 'before'
+                                        indicatorY = hoverMinY
+                                    elseif mousePosY > r.maxY - third then
+                                        dropAction = 'after'
+                                        indicatorY = hoverMaxY
+                                    else
+                                        dropAction = 'into'
+                                        indicatorY = nil
+                                        indicatorR = r
+                                    end
+                                else
+                                    local half = (r.maxY - r.minY) / 2
+                                    if mousePosY < r.minY + half then
+                                        dropAction = 'before'
+                                        indicatorY = hoverMinY
+                                    else
+                                        dropAction = 'after'
+                                        indicatorY = hoverMaxY
+                                    end
+                                end
+
+                                pendingDrop = {
+                                    entry      = r.entry,
+                                    action     = dropAction,
+                                    indicatorY = indicatorY,
+                                    indicatorR = indicatorR,
+                                }
+                                break
+                            end
+                        end
+
+                        if pendingDrop ~= nil then
+                            local winX, winY = imgui.GetWindowPos()
+                            local drawList   = imgui.GetWindowDrawList()
+                            local indColor   = imgui.GetColorU32(ImGuiCol_Button)
+                            local lx0        = winX + 15
+                            local lx1        = winX + imgui.GetWindowWidth() - 15
+
+                            if pendingDrop.action == 'into' and pendingDrop.indicatorR then
+                                drawList:AddRect({ lx0, pendingDrop.indicatorR.minY }, { lx1, pendingDrop.indicatorR.maxY }, indColor)
+                            elseif pendingDrop.indicatorY then
+                                drawList:AddRectFilled({ lx0, pendingDrop.indicatorY - 1 }, { lx1, pendingDrop.indicatorY + 1 }, indColor)
+                            end
+
+                            if imgui.IsMouseReleased(0) then
+                                pendingMove = { mapKey = mapKey, from = drag_state.id, to = pendingDrop.entry.id, action = pendingDrop.action }
+                            end
+                        end
+                    end
+
+                    -- Clear drag state on any mouse-up inside this map's block
                     if drag_state ~= nil and drag_state.mapKey == mapKey and imgui.IsMouseReleased(0) then
                         drag_state = nil
                     end
 
-                    -- Apply deferred operations now that the loop has finished
+                    -- Apply deferred operations (must be outside the item loop)
                     if pendingMove then
                         custom_points.move_item(pendingMove.mapKey, pendingMove.from, pendingMove.to, pendingMove.action)
                         drag_state = nil
                     end
-
                     if pendingEdit then
                         if pendingEdit.isFolder then
                             custom_points.open_edit_folder_popup(pendingEdit.zoneId, pendingEdit.floorId, pendingEdit.entry.id, pendingEdit.entry)
