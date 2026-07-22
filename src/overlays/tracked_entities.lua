@@ -21,63 +21,53 @@ function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, c
 
     local trackedEntities = tracker.get_tracked_entities()
     local activeEntities = tracker.get_active_entities()
-    local locationCache = tracker.get_location_cache()
 
     local iconSize = contextConfig.iconSizeTrackedEntity and contextConfig.iconSizeTrackedEntity[1] or 10
     local drawList = imgui.GetWindowDrawList()
 
-    local entMgr = AshitaCore:GetMemoryManager():GetEntity()
     local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
 
-    for index = 1, 0x400 do
-        local id = entMgr:GetServerId(index)
-        if id == 0 and locationCache[index] then
-            id = bit.bor(0x01000000, bit.lshift(zone, 0x0C), index)
-        end
+    for id, entity in pairs(trackedEntities) do
+        if entity and entity.draw and entity.zoneId == zone then
+            local activePos = activeEntities[id]
+            local index = activePos and activePos.index or bit.band(id, 0x7FF)
+            local enemyEntity = index and GetEntity(index) or nil
+            local targetPosition = nil
 
-        if id > 0 then
-            local entity = trackedEntities[id]
-            if entity and entity.draw and entity.zoneId == zone then
-                local enemyEntity = GetEntity(index)
-                local targetPosition = nil
+            if activePos then
+                targetPosition = { x = activePos.x, y = activePos.y, z = activePos.z }
+            elseif enemyEntity ~= nil then
+                -- Fallback to entity position if not in cache
+                targetPosition = {
+                    x = enemyEntity.Movement.LocalPosition.X,
+                    y = enemyEntity.Movement.LocalPosition.Y,
+                    z = enemyEntity.Movement.LocalPosition.Z,
+                }
+            end
 
-                local activePos = activeEntities[id]
-                if activePos then
-                    targetPosition = { x = activePos.x, y = activePos.y, z = activePos.z }
-                elseif enemyEntity ~= nil then
-                    -- Fallback to entity position if not in cache
-                    targetPosition = {
-                        x = enemyEntity.Movement.LocalPosition.X,
-                        y = enemyEntity.Movement.LocalPosition.Y,
-                        z = enemyEntity.Movement.LocalPosition.Z,
-                    }
-                end
+            if targetPosition ~= nil then
+                local shouldDraw = false
 
-                if targetPosition ~= nil then
-                    local shouldDraw = false
+                if enemyEntity == nil then
+                    shouldDraw = true
+                else
+                    -- Check render flags
+                    local renderFlags = enemyEntity.Render.Flags0
+                    if renderFlags then
+                        local isRendered = bit.band(renderFlags, 0x200) == 0x200 and bit.band(renderFlags, 0x4000) == 0
 
-                    if enemyEntity == nil then
-                        shouldDraw = true
-                    else
-                        -- Check render flags
-                        local renderFlags = enemyEntity.Render.Flags0
-                        if renderFlags then
-                            local isRendered = bit.band(renderFlags, 0x200) == 0x200 and bit.band(renderFlags, 0x4000) == 0
-
-                            if isRendered then
-                                shouldDraw = true
-                            elseif bit.band(renderFlags, 0x00040000) == 0 then
-                                shouldDraw = true
-                            end
+                        if isRendered then
+                            shouldDraw = true
+                        elseif bit.band(renderFlags, 0x00040000) == 0 then
+                            shouldDraw = true
                         end
                     end
+                end
 
-                    if shouldDraw then
-                        -- Convert world coordinates to map coordinates
-                        local mapX, mapY = map.world_to_map_coords(mapData.entry, targetPosition.x, targetPosition.y, targetPosition.z)
-                        if mapX == nil or mapY == nil then
-                            return
-                        end
+                if shouldDraw then
+                    -- Convert world coordinates to map coordinates
+                    local mapX, mapY = map.world_to_map_coords(mapData.entry, targetPosition.x, targetPosition.y, targetPosition.z)
+                    if mapX ~= nil and mapY ~= nil then
 
                         -- Convert map coordinates to texture coordinates
                         local texX, texY

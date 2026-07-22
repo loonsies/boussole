@@ -1,5 +1,5 @@
 addon.name = 'boussole'
-addon.version = "1.10"
+addon.version = '1.10'
 addon.author = 'looney'
 addon.desc = 'Replacement for in-game map with additional features.'
 addon.link = 'https://github.com/loonsies/boussole'
@@ -122,6 +122,10 @@ ashita.events.register('load', 'load_cb', function ()
                     tracker.load_profile(boussole.config.lastLoadedTrackerProfile)
                     boussole.trackedSearchResults = nil
                 end
+
+                ashita.tasks.once(3, function ()
+                    tracker.scan_nearby_entities(true)
+                end)
             end
         else
             map.clear_map_cache()
@@ -251,6 +255,10 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                     if boussole.config.enableTracker[1] and boussole.config.lastLoadedTrackerProfile and boussole.config.lastLoadedTrackerProfile ~= '' then
                         tracker.load_profile(boussole.config.lastLoadedTrackerProfile)
                     end
+
+                    ashita.tasks.once(3, function ()
+                        tracker.scan_nearby_entities(true)
+                    end)
                 end
             else
                 map.clear_map_cache()

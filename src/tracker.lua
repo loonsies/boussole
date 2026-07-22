@@ -12,7 +12,7 @@ local npcEntities = {}     -- { [id] = { id, zoneId, name, alias, draw, index } 
 local packetQueue = {}
 local packetNextSend = 0
 local lastSend = 0
-local nearbyEntityScanInterval = 30
+local nearbyEntityScanInterval = 5
 local lastNearbyEntityScan = -nearbyEntityScanInterval
 local locationCache = {}
 
@@ -384,6 +384,36 @@ local function get_entity_position(entity)
     }
 end
 
+local function is_index_rendered(index)
+    local entity = index and GetEntity(index) or nil
+    return utils.is_entity_rendered(entity)
+end
+
+local function set_active_entity(id, position, index, source)
+    if id == nil or id == 0 or position == nil then
+        return
+    end
+
+    activeEntities[id] = {
+        x = position.x,
+        y = position.y,
+        z = position.z,
+        lastSeen = os.clock(),
+        index = index,
+        source = source,
+    }
+end
+
+local function clear_entity_position(id)
+    local active = activeEntities[id]
+    if active and is_index_rendered(active.index) then
+        set_active_entity(id, get_entity_position(GetEntity(active.index)), active.index, 'scan')
+        return
+    end
+
+    activeEntities[id] = nil
+end
+
 local function update_nearby_entity(id, index, kind)
     if id == 0 or (trackedEntities[id] == nil and kind == nil) then
         return
@@ -424,15 +454,18 @@ local function update_nearby_entity(id, index, kind)
     end
 end
 
-function tracker.scan_nearby_entities()
+function tracker.scan_nearby_entities(force)
     local currentTime = os.clock()
-    if currentTime - lastNearbyEntityScan < nearbyEntityScanInterval then
+    if not force and currentTime - lastNearbyEntityScan < nearbyEntityScanInterval then
         return
     end
+    print(chat.header('boussole'):append(chat.message('Scanning nearby entities...')))
     lastNearbyEntityScan = currentTime
 
     local config = boussole.config
-    if not config or not ((config.showNpcEntities and config.showNpcEntities[1]) or (config.showMobEntities and config.showMobEntities[1])) then
+    local trackerEnabled = config and config.enableTracker and config.enableTracker[1]
+    local hasTrackedEntities = next(trackedEntities) ~= nil
+    if not config or not ((config.showNpcEntities and config.showNpcEntities[1]) or (config.showMobEntities and config.showMobEntities[1]) or (trackerEnabled and hasTrackedEntities)) then
         return
     end
 
@@ -458,17 +491,16 @@ function tracker.scan_nearby_entities()
                     local kind = get_entity_kind(index)
                     local kindEnabled = (kind == 'npc' and config.showNpcEntities and config.showNpcEntities[1])
                         or (kind == 'mob' and config.showMobEntities and config.showMobEntities[1])
+                    local isTracked = trackedEntities[id] ~= nil
                     local isAlive = kind ~= 'mob' or entity.HPPercent == nil or entity.HPPercent > 0
 
-                    if id > 0 and kindEnabled and isAlive then
+                    if index == 710 then
+                        print(chat.header('boussole'):append(chat.message(string.format('Debug: Entity ID %X, Index %d, Kind %s, Tracked: %s, Enabled: %s, Alive: %s', id, index, kind or 'nil', tostring(isTracked), tostring(kindEnabled), tostring(isAlive)))))
+                    end
+
+                    if id > 0 and (kindEnabled or isTracked) and isAlive then
                         update_nearby_entity(id, index, kind)
-                        activeEntities[id] = {
-                            x = position.x,
-                            y = position.y,
-                            z = position.z,
-                            lastSeen = currentTime,
-                            index = index
-                        }
+                        set_active_entity(id, position, index, 'scan')
                     end
                 end
             end
@@ -494,7 +526,7 @@ function tracker.handle_entity_update(e)
     if bit.band(mask, 0x07) ~= 0 then
         local flags1 = struct.unpack('L', e.data, 0x20 + 1)
         if bit.band(flags1, 0x02) == 2 then
-            activeEntities[id] = nil
+            clear_entity_position(id)
             mobEntities[id] = nil
             npcEntities[id] = nil
             return
@@ -502,7 +534,7 @@ function tracker.handle_entity_update(e)
     else
         -- Not dealing with these packets
         if bit.band(mask, 0x20) == 0x20 then
-            activeEntities[id] = nil
+            clear_entity_position(id)
             mobEntities[id] = nil
             npcEntities[id] = nil
         end
@@ -547,13 +579,7 @@ function tracker.handle_entity_update(e)
     end
 
     if position then
-        activeEntities[id] = {
-            x = position.x,
-            y = position.y,
-            z = position.z,
-            lastSeen = os.clock(),
-            index = index
-        }
+        set_active_entity(id, position, index, 'packet')
 
         -- Trigger tracker actions only when the tracker feature is enabled
         local entity = trackedEntities[id]
@@ -574,13 +600,19 @@ function tracker.cache_position(index, x, y, z)
 
     for id, entity in pairs(npcEntities) do
         if entity.index == index then
-            activeEntities[id] = { x = x, y = y, z = z, lastSeen = os.clock(), index = index }
+            set_active_entity(id, locationCache[index], index, 'packet')
         end
     end
 
     for id, entity in pairs(mobEntities) do
         if entity.index == index then
-            activeEntities[id] = { x = x, y = y, z = z, lastSeen = os.clock(), index = index }
+            set_active_entity(id, locationCache[index], index, 'packet')
+        end
+    end
+
+    for id, entity in pairs(trackedEntities) do
+        if bit.band(id, 0x7FF) == index then
+            set_active_entity(id, locationCache[index], index, 'packet')
         end
     end
 end
