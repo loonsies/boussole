@@ -49,6 +49,10 @@ function alliance_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, c
 
     if not contextConfig.showAlliance or not contextConfig.showAlliance[1] then return end
 
+    -- Only show alliance on the map matching the player's current zone
+    local playerZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
+    if mapData.entry and mapData.entry.ZoneId ~= playerZone then return end
+
     if not alliance_overlay.cursor_texture then
         alliance_overlay.load_cursor_texture()
     end

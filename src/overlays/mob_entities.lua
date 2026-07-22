@@ -28,11 +28,15 @@ function mob_entities.draw(contextConfig, mapData, windowPosX, windowPosY, conte
     local iconSize = contextConfig.iconSizeMobEntity and contextConfig.iconSizeMobEntity[1] or 6
     local drawList = imgui.GetWindowDrawList()
 
-    local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
+    local playerZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
+    local displayedZone = mapData.entry.ZoneId
     local trackerEnabled = contextConfig.enableTracker and contextConfig.enableTracker[1]
 
+    -- Only show entities when the displayed map matches the player's current zone
+    if displayedZone ~= playerZone then return end
+
     for id, entity in pairs(nearbyEntities) do
-        if entity and entity.draw and entity.zoneId == zone and not (trackerEnabled and trackerEntities[id]) then
+        if entity and entity.draw and entity.zoneId == playerZone and not (trackerEnabled and trackerEntities[id]) then
             local enemyEntity = entity.index and GetEntity(entity.index) or nil
             local targetPosition = nil
             local canDrawEntity = enemyEntity == nil or utils.is_entity_rendered(enemyEntity)

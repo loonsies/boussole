@@ -52,6 +52,10 @@ function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, con
     -- Check if player display is enabled
     if not contextConfig.showPlayer[1] then return end
 
+    -- Only show player on the map matching the player's current zone
+    local playerZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
+    if mapData.entry and mapData.entry.ZoneId ~= playerZone then return end
+
     if not player_overlay.cursor_texture then
         player_overlay.load_cursor_texture()
     end

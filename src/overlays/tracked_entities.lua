@@ -25,10 +25,14 @@ function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, c
     local iconSize = contextConfig.iconSizeTrackedEntity and contextConfig.iconSizeTrackedEntity[1] or 10
     local drawList = imgui.GetWindowDrawList()
 
-    local zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
+    local playerZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
+    local displayedZone = mapData.entry.ZoneId
+
+    -- Only show entities when the displayed map matches the player's current zone
+    if displayedZone ~= playerZone then return end
 
     for id, entity in pairs(trackedEntities) do
-        if entity and entity.draw and entity.zoneId == zone then
+        if entity and entity.draw and entity.zoneId == playerZone then
             local activePos = activeEntities[id]
             local index = activePos and activePos.index or bit.band(id, 0x7FF)
             local enemyEntity = index and GetEntity(index) or nil
