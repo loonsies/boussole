@@ -422,8 +422,6 @@ function texture.load_map_texture(map_data)
         return nil, nil, string.format('Failed to load texture: %s', err)
     end
 
-    collectgarbage('collect')
-
     return gcTexture, texture_data, nil
 end
 
@@ -436,8 +434,6 @@ function texture.load_nomap_texture()
     if not gcTexture then
         return nil, nil, string.format('Failed to load nomap.png: %s', err)
     end
-
-    collectgarbage('collect')
 
     return gcTexture, texture_data, nil
 end
