@@ -1,5 +1,5 @@
 addon.name = 'boussole'
-addon.version = '1.10'
+addon.version = "1.11"
 addon.author = 'looney'
 addon.desc = 'Replacement for in-game map with additional features.'
 addon.link = 'https://github.com/loonsies/boussole'
