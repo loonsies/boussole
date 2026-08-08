@@ -1,5 +1,5 @@
 addon.name = 'boussole'
-addon.version = "1.11"
+addon.version = '1.11'
 addon.author = 'looney'
 addon.desc = 'Replacement for in-game map with additional features.'
 addon.link = 'https://github.com/loonsies/boussole'
@@ -214,7 +214,8 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
         end
 
         -- Zone change detected - load new map data
-        -- Parse zone and subzone from the zone change packet (matches ScentHound offsets)
+        -- Parse zone and subzone from the zone change packet
+        -- Offsets from https://github.com/ThornyFFXI/ScentHound/blob/80464938983de624ed9acfc913da0315a39d0876/scenthound.lua#L85
         local newZone = struct.unpack('H', e.data, 0x30 + 1)
         local newSubZone = struct.unpack('H', e.data, 0x9E + 1)
         boussole.last_sub_zone_id = newSubZone or 0

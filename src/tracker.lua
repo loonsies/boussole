@@ -22,7 +22,9 @@ local profiles = {}
 local currentZoneId = 0
 local currentSubZoneId = 0
 
+
 local function detect_zone_and_subzone()
+    -- Signature from https://github.com/ThornyFFXI/ScentHound/blob/80464938983de624ed9acfc913da0315a39d0876/scenthound.lua#L44
     local zonePointer = ashita.memory.find(0, 0, 'A1????????668B88????????668B90????????5152E8????????A3', 0x00, 0x00)
     local offset1 = ashita.memory.read_uint32(zonePointer + 0x08)
     local offset2 = ashita.memory.read_uint32(zonePointer + 0x0F)
