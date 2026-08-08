@@ -199,8 +199,6 @@ local function get_next_floor_id(zoneData)
     return nextId
 end
 
-local format_number
-
 local function build_new_floor_data(base, subZoneName)
     return {
         scalingX = (base and base.scalingX) or 1.0,
@@ -271,6 +269,14 @@ local function lua_escape(value)
         :gsub('\n', '\\n')
         :gsub('\r', '\\r')
         :gsub('\t', '\\t')
+end
+
+local function format_number(value)
+    local num = tonumber(value) or 0
+    if num == math.floor(num) then
+        return tostring(num)
+    end
+    return string.format('%.6g', num)
 end
 
 local function build_lua_floor_entry(floorId, data)
@@ -478,14 +484,6 @@ local function ensure_selection(state, zoneId, zoneData)
             reset_edit_state(state, zoneData[state.selectedFloorId])
         end
     end
-end
-
-format_number = function (value)
-    local num = tonumber(value) or 0
-    if num == math.floor(num) then
-        return tostring(num)
-    end
-    return string.format('%.6g', num)
 end
 
 local function calc_input_width(label)

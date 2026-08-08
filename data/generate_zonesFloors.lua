@@ -1,4 +1,4 @@
--- Floor Data Generator for Boussole
+-- Floor data generator for boussole
 -- This script scans the map table in memory and generates a Lua table with zone floor data
 
 local map = require('src.map')
