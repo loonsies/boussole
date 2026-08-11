@@ -105,7 +105,7 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
         local survival_guides = warp_points.survival_guides[zoneId]
         if survival_guides then
             for idx, point in ipairs(survival_guides) do
-                -- Populate floor for survival_guides if not already set
+                -- Populate floor for survival guides if not already set
                 if not point.floor then
                     point.floor = map.get_floor_id(point.posx, point.posy, point.posz)
                     print(string.format('Survival Guide #%d floor set to %d', idx, point.floor))
@@ -113,7 +113,7 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
 
                 local onSameFloor = point.floor == boussole.last_floor_id
 
-                -- Don't draw survival_guides considered to be on a different floor
+                -- Don't draw survival guides considered to be on a different floor
                 if onSameFloor then
                     local mapX, mapY = map.world_to_map_coords(mapData.entry, point.posx, point.posy, point.posz)
 
