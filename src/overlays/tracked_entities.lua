@@ -26,10 +26,9 @@ function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, c
     local drawList = imgui.GetWindowDrawList()
 
     local playerZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
-    local displayedZone = mapData.entry.ZoneId
 
     -- Only show entities when the displayed map matches the player's current zone
-    if displayedZone ~= playerZone then return end
+    if (mapData.entry and mapData.entry.ZoneId ~= playerZone and not (mapData.entry._redirected and mapData.entry._originalZone == playerZone)) then return end
 
     for id, entity in pairs(trackedEntities) do
         if entity and entity.draw and entity.zoneId == playerZone then
@@ -72,7 +71,6 @@ function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, c
                     -- Convert world coordinates to map coordinates
                     local mapX, mapY = map.world_to_map_coords(mapData.entry, targetPosition.x, targetPosition.y, targetPosition.z)
                     if mapX ~= nil and mapY ~= nil then
-
                         -- Convert map coordinates to texture coordinates
                         local texX, texY
                         if mapData.entry._isCustomMap then

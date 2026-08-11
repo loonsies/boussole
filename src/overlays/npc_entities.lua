@@ -29,11 +29,10 @@ function npc_entities.draw(contextConfig, mapData, windowPosX, windowPosY, conte
     local drawList = imgui.GetWindowDrawList()
 
     local playerZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
-    local displayedZone = mapData.entry.ZoneId
     local trackerEnabled = contextConfig.enableTracker and contextConfig.enableTracker[1]
 
     -- Only show entities when the displayed map matches the player's current zone
-    if displayedZone ~= playerZone then return end
+    if (mapData.entry and mapData.entry.ZoneId ~= playerZone and not (mapData.entry._redirected and mapData.entry._originalZone == playerZone)) then return end
 
     for id, entity in pairs(nearbyEntities) do
         if entity and entity.draw and entity.zoneId == playerZone and not (trackerEnabled and trackerEntities[id]) then

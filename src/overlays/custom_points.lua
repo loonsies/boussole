@@ -640,9 +640,9 @@ function custom_points.draw_popup()
             end
             imgui.Spacing()
 
-            -- Image Name input (only show for Custom Image shape)
+            -- Image name input (only show for custom image shape)
             if custom_points.popup_state.iconShape[1] == 6 then
-                imgui.Text('Image Name:')
+                imgui.Text('Image name:')
                 imgui.SetNextItemWidth(-1)
                 imgui.InputText('##ImageName', custom_points.popup_state.imageName, 128)
                 imgui.Spacing()
