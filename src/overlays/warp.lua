@@ -48,42 +48,53 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
         local homepoints = warp_points.homepoints[zoneId]
         if homepoints then
             for idx, point in ipairs(homepoints) do
-                local mapX, mapY = map.world_to_map_coords(mapData.entry, point.posx, point.posy, point.posz)
+                -- Populate floor for homepoints if not already set
+                if not point.floor then
+                    point.floor = map.get_floor_id(point.posx, point.posy, point.posz)
+                    print(string.format('Homepoint #%d floor set to %d', idx, point.floor))
+                end
 
-                if mapX then
-                    -- Convert map coordinates to texture pixel coordinates
-                    local texX, texY
-                    if mapData.entry._isCustomMap then
-                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
-                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
-                    else
-                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
-                    end
+                local onSameFloor = point.floor == boussole.last_floor_id
 
-                    -- Convert to screen coordinates
-                    local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
-                    local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
+                -- Don't draw homepoints considered to be on a different floor
+                if onSameFloor then
+                    local mapX, mapY = map.world_to_map_coords(mapData.entry, point.posx, point.posy, point.posz)
 
-                    -- Check if mouse is hovering over this point
-                    local dx = mousePosX - screenX
-                    local dy = mousePosY - screenY
-                    local distance = math.sqrt(dx * dx + dy * dy)
+                    if mapX then
+                        -- Convert map coordinates to texture pixel coordinates
+                        local texX, texY
+                        if mapData.entry._isCustomMap then
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+                        else
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                        end
 
-                    if distance <= hoverRadius then
-                        hovered_point = point
-                        hovered_type = 'Homepoint'
-                        hovered_index = idx
-                    end
+                        -- Convert to screen coordinates
+                        local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
+                        local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
 
-                    local markerRadius = contextConfig.iconSizeHomepoint[1] or 8.0
-                    local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorHomepoint), contextAlpha)
-                    local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
+                        -- Check if mouse is hovering over this point
+                        local dx = mousePosX - screenX
+                        local dy = mousePosY - screenY
+                        local distance = math.sqrt(dx * dx + dy * dy)
 
-                    utils.draw_diamond_marker(drawList, screenX, screenY, markerRadius, markerColor, outlineColor)
+                        if distance <= hoverRadius then
+                            hovered_point = point
+                            hovered_type = 'Homepoint'
+                            hovered_index = idx
+                        end
 
-                    if showLabels and (contextConfig.showHomepointLabels == nil or contextConfig.showHomepointLabels[1]) then
-                        utils.draw_label(drawList, string.format('Homepoint #%d', idx), screenX, screenY, markerRadius, markerColor, contextAlpha)
+                        local markerRadius = contextConfig.iconSizeHomepoint[1] or 8.0
+                        local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorHomepoint), contextAlpha)
+                        local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
+
+                        utils.draw_diamond_marker(drawList, screenX, screenY, markerRadius, markerColor, outlineColor)
+
+                        if showLabels and (contextConfig.showHomepointLabels == nil or contextConfig.showHomepointLabels[1]) then
+                            utils.draw_label(drawList, string.format('Homepoint #%d', idx), screenX, screenY, markerRadius, markerColor, contextAlpha)
+                        end
                     end
                 end
             end
@@ -94,42 +105,53 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
         local survival_guides = warp_points.survival_guides[zoneId]
         if survival_guides then
             for idx, point in ipairs(survival_guides) do
-                local mapX, mapY = map.world_to_map_coords(mapData.entry, point.posx, point.posy, point.posz)
+                -- Populate floor for survival_guides if not already set
+                if not point.floor then
+                    point.floor = map.get_floor_id(point.posx, point.posy, point.posz)
+                    print(string.format('Survival Guide #%d floor set to %d', idx, point.floor))
+                end
 
-                if mapX then
-                    -- Convert map coordinates to texture pixel coordinates
-                    local texX, texY
-                    if mapData.entry._isCustomMap then
-                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
-                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
-                    else
-                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
-                    end
+                local onSameFloor = point.floor == boussole.last_floor_id
 
-                    -- Convert to screen coordinates
-                    local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
-                    local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
+                -- Don't draw survival_guides considered to be on a different floor
+                if onSameFloor then
+                    local mapX, mapY = map.world_to_map_coords(mapData.entry, point.posx, point.posy, point.posz)
 
-                    -- Check if mouse is hovering over this point
-                    local dx = mousePosX - screenX
-                    local dy = mousePosY - screenY
-                    local distance = math.sqrt(dx * dx + dy * dy)
+                    if mapX then
+                        -- Convert map coordinates to texture pixel coordinates
+                        local texX, texY
+                        if mapData.entry._isCustomMap then
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+                        else
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                        end
 
-                    if distance <= hoverRadius then
-                        hovered_point = point
-                        hovered_type = 'Survival Guide'
-                        hovered_index = 0 -- No index for survival guides
-                    end
+                        -- Convert to screen coordinates
+                        local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
+                        local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
 
-                    local markerRadius = contextConfig.iconSizeSurvivalGuide[1] or 8.0
-                    local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorSurvivalGuide), contextAlpha)
-                    local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
+                        -- Check if mouse is hovering over this point
+                        local dx = mousePosX - screenX
+                        local dy = mousePosY - screenY
+                        local distance = math.sqrt(dx * dx + dy * dy)
 
-                    utils.draw_square_marker(drawList, screenX, screenY, markerRadius, markerColor, outlineColor, 1.5)
+                        if distance <= hoverRadius then
+                            hovered_point = point
+                            hovered_type = 'Survival Guide'
+                            hovered_index = 0 -- No index for survival guides
+                        end
 
-                    if showLabels and (contextConfig.showSurvivalGuideLabels == nil or contextConfig.showSurvivalGuideLabels[1]) then
-                        utils.draw_label(drawList, 'Survival Guide', screenX, screenY, markerRadius, markerColor, contextAlpha)
+                        local markerRadius = contextConfig.iconSizeSurvivalGuide[1] or 8.0
+                        local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorSurvivalGuide), contextAlpha)
+                        local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
+
+                        utils.draw_square_marker(drawList, screenX, screenY, markerRadius, markerColor, outlineColor, 1.5)
+
+                        if showLabels and (contextConfig.showSurvivalGuideLabels == nil or contextConfig.showSurvivalGuideLabels[1]) then
+                            utils.draw_label(drawList, 'Survival Guide', screenX, screenY, markerRadius, markerColor, contextAlpha)
+                        end
                     end
                 end
             end
