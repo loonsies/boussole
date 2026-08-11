@@ -32,13 +32,13 @@ function tracked_entities.draw(contextConfig, mapData, windowPosX, windowPosY, c
 
     for id, entity in pairs(trackedEntities) do
         if entity and entity.draw and entity.zoneId == playerZone then
-            local activePos = activeEntities[id]
-            local index = activePos and activePos.index or bit.band(id, 0x7FF)
+            local activeEntity = activeEntities[id]
+            local index = activeEntity and activeEntity.index or bit.band(id, 0x7FF)
             local enemyEntity = index and GetEntity(index) or nil
             local targetPosition = nil
 
-            if activePos then
-                targetPosition = { x = activePos.x, y = activePos.y, z = activePos.z }
+            if activeEntity then
+                targetPosition = { x = activeEntity.x, y = activeEntity.y, z = activeEntity.z }
             elseif enemyEntity ~= nil then
                 -- Fallback to entity position if not in cache
                 targetPosition = {

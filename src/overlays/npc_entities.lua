@@ -40,9 +40,9 @@ function npc_entities.draw(contextConfig, mapData, windowPosX, windowPosY, conte
             local targetPosition = nil
             local canDrawEntity = enemyEntity == nil or utils.is_entity_rendered(enemyEntity)
 
-            local activePos = activeEntities[id]
-            if activePos and canDrawEntity then
-                targetPosition = { x = activePos.x, y = activePos.y, z = activePos.z }
+            local activeEntity = activeEntities[id]
+            if activeEntity and canDrawEntity then
+                targetPosition = { x = activeEntity.x, y = activeEntity.y, z = activeEntity.z }
             elseif canDrawEntity and enemyEntity ~= nil then
                 -- Fallback to entity position if not in cache
                 targetPosition = {
@@ -53,40 +53,46 @@ function npc_entities.draw(contextConfig, mapData, windowPosX, windowPosY, conte
             end
 
             if targetPosition ~= nil then
-                -- Convert world coordinates to map coordinates
-                local mapX, mapY = map.world_to_map_coords(mapData.entry, targetPosition.x, targetPosition.y, targetPosition.z)
-                if mapX ~= nil and mapY ~= nil then
-                    -- Convert map coordinates to texture coordinates
-                    local texX, texY
-                    if mapData.entry._isCustomMap then
-                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
-                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
-                    else
-                        texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
-                        texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
-                    end
+                local onSameFloor = activeEntity and activeEntity.floor == boussole.last_floor_id or (enemyEntity and map.get_floor_id(targetPosition.x, targetPosition.y, targetPosition.z) == boussole.last_floor_id)
 
-                    -- Convert texture coordinates to screen coordinates
-                    local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
-                    local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
+                -- Don't draw entities considered to be on a different floor
+                if onSameFloor then
+                    -- Convert world coordinates to map coordinates
+                    local mapX, mapY = map.world_to_map_coords(mapData.entry, targetPosition.x, targetPosition.y, targetPosition.z)
 
-                    local colorU32 = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorNpcEntity), contextAlpha)
+                    if mapX ~= nil and mapY ~= nil then
+                        -- Convert map coordinates to texture coordinates
+                        local texX, texY
+                        if mapData.entry._isCustomMap then
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / mapData.entry._customData.referenceSize)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / mapData.entry._customData.referenceSize)
+                        else
+                            texX = (mapX - mapData.entry.OffsetX) * (textureWidth / 512.0)
+                            texY = (mapY - mapData.entry.OffsetY) * (textureWidth / 512.0)
+                        end
 
-                    utils.draw_circle_marker(drawList, screenX, screenY, iconSize, colorU32, utils.mul_alpha(0xFF000000, contextAlpha), 2.0)
+                        -- Convert texture coordinates to screen coordinates
+                        local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
+                        local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
 
-                    -- Add to tooltip if hovering
-                    local mousePosX, mousePosY = imgui.GetMousePos()
-                    local distance = math.sqrt((mousePosX - screenX) ^ 2 + (mousePosY - screenY) ^ 2)
+                        local colorU32 = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorNpcEntity), contextAlpha)
 
-                    if distance <= iconSize + 5 then
-                        local displayName = entity.alias or entity.name
-                        tooltip.add_line(displayName, colorU32)
-                    end
+                        utils.draw_circle_marker(drawList, screenX, screenY, iconSize, colorU32, utils.mul_alpha(0xFF000000, contextAlpha), 2.0)
 
-                    -- Draw label above marker if showLabels is enabled
-                    if showLabels then
-                        local displayName = entity.alias or entity.name
-                        utils.draw_label(drawList, displayName, screenX, screenY, iconSize, colorU32, contextAlpha)
+                        -- Add to tooltip if hovering
+                        local mousePosX, mousePosY = imgui.GetMousePos()
+                        local distance = math.sqrt((mousePosX - screenX) ^ 2 + (mousePosY - screenY) ^ 2)
+
+                        if distance <= iconSize + 5 then
+                            local displayName = entity.alias or entity.name
+                            tooltip.add_line(displayName, colorU32)
+                        end
+
+                        -- Draw label above marker if showLabels is enabled
+                        if showLabels then
+                            local displayName = entity.alias or entity.name
+                            utils.draw_label(drawList, displayName, screenX, screenY, iconSize, colorU32, contextAlpha)
+                        end
                     end
                 end
             end

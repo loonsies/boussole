@@ -2,6 +2,7 @@ local tracker = {}
 
 local chat = require('chat')
 local utils = require('src.utils')
+local map = require('src.map')
 
 -- Local state
 local trackedEntities = {} -- { [id] = { id, name, alias, color, alarm, draw, widescan, lastPacket } }
@@ -400,6 +401,7 @@ local function set_active_entity(id, position, index, source)
         x = position.x,
         y = position.y,
         z = position.z,
+        floor = map.get_floor_id(position.x, position.y, position.z),
         lastSeen = os.clock(),
         index = index,
         source = source,
