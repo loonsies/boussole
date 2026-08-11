@@ -1,6 +1,7 @@
 local ffi = require('ffi')
 local d3d8 = require('d3d8')
 local map = require('src.map')
+local chat = require('chat')
 
 local C = ffi.C;
 local texture = {}
@@ -440,7 +441,7 @@ end
 
 -- Load texture (map or nomap) and update UI state
 -- If map_data is nil, loads nomap texture
-function texture.load_and_set(ui_state, map_data, chat_module, addon_name)
+function texture.load_and_set(ui_state, map_data)
     local gcTexture, texture_data, err
 
     if map_data then
@@ -475,9 +476,7 @@ function texture.load_and_set(ui_state, map_data, chat_module, addon_name)
         ui_state.restore_view_state()
         return true
     else
-        if chat_module and addon_name then
-            print(chat_module.header(addon_name):append(chat_module.error(err)))
-        end
+        print(chat.header(addon.name):append(chat.error(err)))
         return false
     end
 end

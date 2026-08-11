@@ -85,12 +85,13 @@ ashita.events.register('load', 'load_cb', function ()
 
     settings.register('settings', 'settings_update_cb', function (newConfig)
         boussole.config = newConfig
+        custom_points.load_custom_points() -- Reload per-character custom points after char change
     end)
 
     ashita.tasks.once(1, function ()
         local mapData, err = map.load_current_map_dat()
         if mapData then
-            texture.load_and_set(ui, mapData, chat, addon.name)
+            texture.load_and_set(ui, mapData)
 
             -- Store initial floor ID and set manual selections to current zone/floor
             local x, y, z = map.get_player_position()
@@ -129,7 +130,7 @@ ashita.events.register('load', 'load_cb', function ()
             end
         else
             map.clear_map_cache()
-            texture.load_and_set(ui, nil, chat, addon.name)
+            texture.load_and_set(ui, nil)
         end
     end)
 end)
@@ -161,7 +162,7 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
             if current_floor_id and loadedEntry and loadedEntry.ZoneId == 0 then
                 local mapData, err = map.load_current_map_dat()
                 if mapData then
-                    texture.load_and_set(ui, mapData, chat, addon.name)
+                    texture.load_and_set(ui, mapData)
                     boussole.manualZoneId[1] = mapData.entry.ZoneId
                     boussole.manualFloorId[1] = mapData.entry.FloorId
                     boussole.last_floor_id = mapData.entry.FloorId
@@ -171,10 +172,10 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
                 boussole.last_floor_id = current_floor_id
                 local mapData, err = map.load_current_map_dat()
                 if mapData then
-                    texture.load_and_set(ui, mapData, chat, addon.name)
+                    texture.load_and_set(ui, mapData)
                 else
                     map.clear_map_cache()
-                    texture.load_and_set(ui, nil, chat, addon.name)
+                    texture.load_and_set(ui, nil)
                 end
             elseif current_floor_id then
                 boussole.last_floor_id = current_floor_id
@@ -224,7 +225,7 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
             local mapData, err = map.load_current_map_dat()
             if mapData then
                 tracker.handle_zone_change()
-                texture.load_and_set(ui, mapData, chat, addon.name)
+                texture.load_and_set(ui, mapData)
 
                 -- Update floor ID after zone change
                 local x, y, z = map.get_player_position()
@@ -263,7 +264,7 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
                 end
             else
                 map.clear_map_cache()
-                texture.load_and_set(ui, nil, chat, addon.name)
+                texture.load_and_set(ui, nil)
                 boussole.last_floor_id = nil
             end
         end)

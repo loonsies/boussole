@@ -530,7 +530,7 @@ function ui.drawUI()
         else
             imgui.Text('No map texture loaded')
             if imgui.Button('Reload Map') then
-                texture.load_and_set(ui, map.current_map_data, chat, addon.name)
+                texture.load_and_set(ui, map.current_map_data)
             end
         end
     else
@@ -565,7 +565,7 @@ function ui.update()
                         datPath = map.get_dat_file_path(entry)
                     }
                 end
-                texture.load_and_set(ui, map.current_map_data, chat, addon.name)
+                texture.load_and_set(ui, map.current_map_data)
             end
         end
         boussole.manualMapReload[1] = false

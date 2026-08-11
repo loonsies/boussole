@@ -102,13 +102,13 @@ function tracker.load_zone_entities(zoneId, subZoneId)
     local file = dats.get_zone_npclist(zoneId, subZoneId)
 
     if file == nil or file:len() == 0 then
-        print(chat.header('boussole'):append(chat.error(string.format('Failed to determine zone entity DAT file. [zid: %d, sid: %d]', zoneId, subZoneId))))
+        print(chat.header(addon.name):append(chat.error(string.format('Failed to determine zone entity DAT file. [zid: %d, sid: %d]', zoneId, subZoneId))))
         return
     end
 
     local f = io.open(file, 'rb')
     if f == nil then
-        print(chat.header('boussole'):append(chat.error(string.format('Failed to access zone entity DAT file. [zid: %d, sid: %d]', zoneId, subZoneId))))
+        print(chat.header(addon.name):append(chat.error(string.format('Failed to access zone entity DAT file. [zid: %d, sid: %d]', zoneId, subZoneId))))
         return
     end
 
@@ -117,7 +117,7 @@ function tracker.load_zone_entities(zoneId, subZoneId)
 
     if size == 0 or ((size - math.floor(size / 0x20) * 0x20) ~= 0) then
         f:close()
-        print(chat.header('boussole'):append(chat.error(string.format('Failed to validate zone entity DAT file. [zid: %d, sid: %d]', zoneId, subZoneId))))
+        print(chat.header(addon.name):append(chat.error(string.format('Failed to validate zone entity DAT file. [zid: %d, sid: %d]', zoneId, subZoneId))))
         return
     end
 
@@ -226,7 +226,7 @@ function tracker.remove_entity(id)
 
     local index = bit.band(id, 0x7FF)
     if count > 0 then
-        print(chat.header('boussole'):append(chat.message(string.format('Removed %d packets for entity ID %X from queue', count, index))))
+        print(chat.header(addon.name):append(chat.message(string.format('Removed %d packets for entity ID %X from queue', count, index))))
     end
 end
 
@@ -249,7 +249,7 @@ function tracker.clear_all()
     trackedEntities = {}
 
     if #packetQueue > 0 then
-        print(chat.header('boussole'):append(chat.message(string.format('%d packets removed from queue', #packetQueue))))
+        print(chat.header(addon.name):append(chat.message(string.format('%d packets removed from queue', #packetQueue))))
     end
 
     packetQueue = {}
@@ -279,7 +279,7 @@ function tracker.send_single_packet(id)
     -- Print chat message
     local entity = trackedEntities[id]
     local displayName = entity.alias or entity.name
-    print(chat.header('boussole'):append(chat.message(string.format('Sent tracker packet for: %s', displayName))))
+    print(chat.header(addon.name):append(chat.message(string.format('Sent tracker packet for: %s', displayName))))
 
     return true
 end
@@ -316,7 +316,7 @@ function tracker.send_all_packets(entities)
 
     -- Print chat message
     if #packetQueue > 0 then
-        print(chat.header('boussole'):append(chat.message(string.format('Starting tracker packet queue: %d entities', #packetQueue))))
+        print(chat.header(addon.name):append(chat.message(string.format('Starting tracker packet queue: %d entities', #packetQueue))))
     end
 end
 
@@ -331,7 +331,7 @@ function tracker.process_packet_queue()
 
         -- Print completion message when queue finishes
         if #packetQueue == 0 then
-            print(chat.header('boussole'):append(chat.message('Tracker packet queue completed')))
+            print(chat.header(addon.name):append(chat.message('Tracker packet queue completed')))
         end
     end
 end
@@ -660,7 +660,7 @@ function tracker.handle_zone_change()
 
     -- Clear packet queue and notify if packets were queued
     if tracker.is_sending_packets() then
-        print(chat.header('boussole'):append(chat.message(string.format('%d packets removed from queue due to zone change', #packetQueue))))
+        print(chat.header(addon.name):append(chat.message(string.format('%d packets removed from queue due to zone change', #packetQueue))))
         packetQueue = {}
     end
 end
@@ -756,7 +756,7 @@ function tracker.save_tracker_data()
     }
 
     local json = require('json')
-    local settingsPath = string.format('%s/config/addons/%s/', AshitaCore:GetInstallPath(), 'boussole')
+    local settingsPath = string.format('%s/config/addons/%s/', AshitaCore:GetInstallPath(), addon.name)
     local filePath = settingsPath .. 'tracker_profiles.json'
 
     -- Ensure directory exists
@@ -772,7 +772,7 @@ end
 -- Load tracker data from JSON file
 function tracker.load_tracker_data()
     local json = require('json')
-    local settingsPath = string.format('%s/config/addons/%s/', AshitaCore:GetInstallPath(), 'boussole')
+    local settingsPath = string.format('%s/config/addons/%s/', AshitaCore:GetInstallPath(), addon.name)
     local filePath = settingsPath .. 'tracker_profiles.json'
 
     local file = io.open(filePath, 'r')

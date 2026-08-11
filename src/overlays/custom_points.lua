@@ -787,7 +787,7 @@ function custom_points.paste_item(zoneId, floorId, targetFolderId)
 
     local success, item = pcall(json.decode, j)
     if not success or type(item) ~= 'table' or not item.id then
-        print(chat.header('boussole'):append(chat.error('Clipboard content is not a valid custom point or folder.')))
+        print(chat.header(addon.name):append(chat.error('Clipboard content is not a valid custom point or folder.')))
         return
     end
 

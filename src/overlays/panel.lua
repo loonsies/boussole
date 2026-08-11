@@ -858,7 +858,7 @@ local function draw_points_tab()
         return clicked
     end
 
-    imgui.SeparatorText(ICON_FA_LOCATION_DOT .. ' Custom Points')
+    imgui.SeparatorText(ICON_FA_LOCATION_DOT .. ' Custom points')
     imgui.Spacing()
 
     local function parse_map_key(mk)
@@ -880,9 +880,9 @@ local function draw_points_tab()
     end)
 
     if #mapKeys == 0 then
-        imgui.TextDisabled('No custom points yet.')
+        imgui.TextWrapped('No custom points yet.')
         imgui.Spacing()
-        imgui.TextDisabled('Double right-click on the map to add a point.')
+        imgui.TextWrapped('Double right-click on the map to add a point.')
         return
     end
 
@@ -1731,7 +1731,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
                 end
 
 
-                if imgui.BeginTabItem('Custom Points') then
+                if imgui.BeginTabItem('Points') then
                     draw_points_tab()
                     imgui.EndTabItem()
                 end
