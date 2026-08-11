@@ -5,11 +5,11 @@ local utils = require('src.utils')
 local map = require('src.map')
 
 -- Local state
-local trackedEntities = {} -- { [id] = { id, name, alias, color, alarm, draw, widescan, lastPacket } }
+local trackedEntities = {} -- { [id] = { id, zoneId, name, alias, color, alarm, draw, widescan, lastPacket, timeout } }
 local zoneEntities = {}    -- { [id] = { id, name, index } }
-local activeEntities = {}  -- { [id] = { x, y, z, lastSeen } }
-local mobEntities = {}     -- { [id] = { id, zoneId, name, alias, draw, index } }
-local npcEntities = {}     -- { [id] = { id, zoneId, name, alias, draw, index } }
+local activeEntities = {}  -- { [id] = { x, y, z, floor, lastSeen, index, source } }
+local mobEntities = {}     -- { [id] = { id, zoneId, name, alias, draw, index, lastSeen } }
+local npcEntities = {}     -- { [id] = { id, zoneId, name, alias, draw, index, lastSeen } }
 local packetQueue = {}
 local packetNextSend = 0
 local lastSend = 0
@@ -22,7 +22,6 @@ local currentProfile = nil
 local profiles = {}
 local currentZoneId = 0
 local currentSubZoneId = 0
-
 
 local function detect_zone_and_subzone()
     -- Signature from https://github.com/ThornyFFXI/ScentHound/blob/80464938983de624ed9acfc913da0315a39d0876/scenthound.lua#L44
