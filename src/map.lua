@@ -6,7 +6,9 @@ local utils = require('src.utils')
 local zonesFloors = require('data.zonesFloors')
 local customMaps = require('data.maps')
 
+-- From https://discord.com/channels/264673946257850368/445394504040579092/634988737088192512
 local MAP_TABLE_SIG = '8A0D????????5333C05684C95774??8A5424188B7424148B7C2410B9'
+-- From https://discord.com/channels/264673946257850368/445394504040579092/634988844646924298
 local ENTRY_SIZE = 0x0E
 
 ffi.cdef [[
@@ -41,6 +43,7 @@ end
 
 -- Initialize the GetMapFloorId function
 function map.init_floor_function()
+    -- From https://discord.com/channels/264673946257850368/1104281907237245008/1375196315545501756
     local func_addr = mem.find('FFXiMain.dll', 0, '8B542408568D4424108BF18B4C2410508B44240C', 0, 0)
     local this_addr = mem.find('FFXiMain.dll', 0, '8B7424148B4424108B7C240C8B0D', 0x0E, 0)
 
