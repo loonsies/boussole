@@ -44,6 +44,7 @@ function same_floor_exceptions.draw_window()
         local filter = string.lower(ffi.string(exceptionSearchText[1]))
 
         if imgui.BeginCombo('##ExceptionZone', comboPreview) then
+            imgui.SetNextItemWidth(-1)
             imgui.InputText('##SearchException', exceptionSearchText, 256)
             filter = string.lower(ffi.string(exceptionSearchText[1]))
             imgui.Separator()
