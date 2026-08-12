@@ -919,7 +919,6 @@ local function draw_points_tab()
                     for i, entry in ipairs(itemList) do
                         imgui.PushID('cp_' .. entry.id)
 
-                        local label    = (entry.name ~= nil and entry.name ~= '') and entry.name or '(unnamed)'
                         local isFolder = (entry.type == 'folder')
 
                         -- Propagate masked state downward
@@ -935,6 +934,21 @@ local function draw_points_tab()
                             custom_points.save_custom_points()
                         end
                         imgui.SameLine()
+
+                        -- Calculate label size for ellipsis
+                        local rawLabel = (entry.name ~= nil and entry.name ~= '') and entry.name or '(unnamed)'
+                        local avail    = imgui.GetContentRegionAvail()
+                        local label    = ''
+                        if isFolder then
+                            -- TreeNodeEx prepends the folder icon + 2 spaces, plus ImGui draws its own arrow
+                            local prefixWidth = select(1, imgui.CalcTextSize(ICON_FA_FOLDER .. '  '))
+                            local arrowWidth  = imgui.GetFontSize() -- tree arrow is roughly one font-size wide
+                            label             = utils.clamp_text_to_width(rawLabel, avail - prefixWidth - arrowWidth)
+                        else
+                            -- Selectable prepends 4 spaces as room for the drawn icon
+                            local prefixWidth = select(1, imgui.CalcTextSize('    '))
+                            label = utils.clamp_text_to_width(rawLabel, avail - prefixWidth)
+                        end
 
                         -- Main row widget
                         local nodeOpen = false
