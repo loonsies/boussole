@@ -889,26 +889,24 @@ local function draw_points_tab()
     for _, mapKey in ipairs(mapKeys) do
         local points = custom_points.data[mapKey]
         if #points > 0 and type(points) == 'table' then
-            local isCurrent       = (mapKey == currentMapKey)
-            local zoneId, floorId = parse_map_key(mapKey)
-            local nodeLabel       = isCurrent
-                and string.format(ICON_FA_MAP_LOCATION .. ' Current map [%s]', mapKey)
-                or string.format(ICON_FA_MAP .. ' Map [%s]', mapKey)
-            local nodeFlags       = isCurrent and ImGuiTreeNodeFlags_DefaultOpen or 0
+            local isCurrent         = (mapKey == currentMapKey)
+            local zoneId, floorId   = parse_map_key(mapKey)
 
-            if imgui.TreeNodeEx(nodeLabel .. '##cpmap_' .. mapKey, nodeFlags) then
-                -- Map context menu
-                if imgui.BeginPopupContextItem('ctx_map_' .. mapKey) then
-                    if aligned_menu_item(ICON_FA_FOLDER_PLUS, 'New Folder') then
-                        custom_points.create_folder(zoneId, floorId, nil)
-                    end
-                    if aligned_menu_item(ICON_FA_CLIPBOARD, 'Paste') then
-                        custom_points.paste_item(zoneId, floorId, nil)
-                    end
-                    imgui.EndPopup()
-                end
+            local rawNodeLabel      = isCurrent
+                and string.format(ICON_FA_MAP_LOCATION .. ' %s - Floor %s (current)', zones[zoneId] and zones[zoneId].en or 'Unknown', floorId)
+                or string.format(ICON_FA_MAP .. ' %s - Floor %s', zones[zoneId] and zones[zoneId].en or 'Unknown', floorId)
 
+            -- Calculate label size for ellipsis
+            local avail             = imgui.GetContentRegionAvail()
+            local prefixWidth       = imgui.CalcTextSize(ICON_FA_MAP)
+            local arrowWidth        = imgui.GetFontSize() -- tree arrow is roughly one font-size wide
+            local nodeLabel         = utils.clamp_text_to_width(rawNodeLabel, avail - prefixWidth - arrowWidth)
 
+            local nodeFlags         = isCurrent and ImGuiTreeNodeFlags_DefaultOpen or 0
+
+            local isTreeNodeOpen    = imgui.TreeNodeEx(nodeLabel .. '##cpmap_' .. mapKey, nodeFlags)
+            local isTreeNodeHovered = imgui.IsItemHovered()
+            if isTreeNodeOpen then
                 local pendingMove     = nil
                 local pendingEdit     = nil
                 local pendingDelete   = nil
@@ -1182,8 +1180,27 @@ local function draw_points_tab()
                     custom_points.popup_state.imageName = { pendingDelete.entry.imageName or '' }
                     custom_points.delete_point()
                 end
-
                 imgui.TreePop()
+            end
+
+            -- Map context menu
+            if imgui.BeginPopupContextItem('ctx_map_' .. mapKey) then
+                imgui.TextDisabled(rawNodeLabel)
+                imgui.Separator()
+                if aligned_menu_item(ICON_FA_FOLDER_PLUS, 'New Folder') then
+                    custom_points.create_folder(zoneId, floorId, nil)
+                end
+                if aligned_menu_item(ICON_FA_CLIPBOARD, 'Paste') then
+                    custom_points.paste_item(zoneId, floorId, nil)
+                end
+                imgui.EndPopup()
+            end
+
+            -- Tooltip on hover if label is truncated
+            if isTreeNodeHovered and rawNodeLabel ~= nodeLabel then
+                imgui.BeginTooltip()
+                imgui.Text(rawNodeLabel)
+                imgui.EndTooltip()
             end
         end
     end
