@@ -966,6 +966,17 @@ local function draw_points_tab()
                         else
                             local curX, curY = imgui.GetCursorScreenPos()
                             imgui.Selectable('    ' .. label .. '##' .. entry.id, false, ImGuiSelectableFlags_SpanAvailWidth)
+
+                            -- Tooltip on hover
+                            if imgui.IsItemHovered() then
+                                imgui.BeginTooltip()
+                                imgui.Text(rawLabel)
+                                imgui.Separator()
+                                local note = entry.note and entry.note ~= '' and entry.note or '(no note)'
+                                imgui.TextColored(entry.color, note)
+                                imgui.EndTooltip()
+                            end
+
                             local drawList = imgui.GetWindowDrawList()
                             local color    = utils.rgb_to_abgr(entry.color)
                             local iconSize = 6
