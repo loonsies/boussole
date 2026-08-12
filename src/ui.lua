@@ -1,6 +1,7 @@
 local ui = {}
 
 local imgui = require('imgui')
+local utils = require('src.utils')
 local chat = require('chat')
 local settings = require('settings')
 local map = require('src.map')
@@ -173,6 +174,10 @@ function ui.center_on_player(mapData, availWidth, availHeight, textureWidth, tex
 end
 
 function ui.drawUI()
+    if boussole.isMoving and boussole.config.transparentWhenMoving[1] then
+        imgui.PushStyleVar(ImGuiStyleVar_Alpha, boussole.config.movingTransparency[1])
+    end
+
     imgui.SetNextWindowSize({ 800, 600 }, ImGuiCond_FirstUseEver)
     imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 })
 
@@ -415,19 +420,21 @@ function ui.drawUI()
 
             -- Draw the map texture
             local texturePointer = tonumber(ffi.cast('uint32_t', ui.texture_id))
+            local currentAlpha = (boussole.isMoving and boussole.config.transparentWhenMoving[1]) and boussole.config.movingTransparency[1] or 1.0
             if texturePointer and map.current_map_data and map.current_map_data.entry then
                 -- Calculate position
                 local posX = windowPosX + contentMinX + ui.map_offset.x
                 local posY = windowPosY + contentMinY + ui.map_offset.y
 
                 -- Draw texture
+                local mapColor = utils.rgb_to_abgr({ 1.0, 1.0, 1.0, currentAlpha })
                 imgui.GetWindowDrawList():AddImage(
                     texturePointer,
                     { posX, posY },
                     { posX + texWidth, posY + texHeight },
-                    { 0, 0 },  -- UV min
-                    { 1, 1 },  -- UV max
-                    0xFFFFFFFF -- White tint
+                    { 0, 0 }, -- UV min
+                    { 1, 1 }, -- UV max
+                    mapColor
                 )
 
                 map_data_editor.draw_bounds(map.current_map_data, windowPosX, windowPosY,
@@ -537,6 +544,10 @@ function ui.drawUI()
         imgui.PopStyleVar()
     end
     imgui.End()
+
+    if boussole.isMoving and boussole.config.transparentWhenMoving[1] then
+        imgui.PopStyleVar()
+    end
 end
 
 function ui.update()

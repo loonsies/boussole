@@ -33,10 +33,12 @@ function utils.rgb_to_abgr(rgbaTable)
         return 0xFFFFFFFF
     end
 
+    local styleAlpha = imgui.GetStyle().Alpha
+
     local r = math.floor((rgbaTable[1] or 1.0) * 255)
     local g = math.floor((rgbaTable[2] or 1.0) * 255)
     local b = math.floor((rgbaTable[3] or 1.0) * 255)
-    local a = math.floor((rgbaTable[4] or 1.0) * 255)
+    local a = math.floor(((rgbaTable[4] or 1.0) * styleAlpha) * 255)
 
     -- ABGR format: (A << 24) | (B << 16) | (G << 8) | R
     return bit.bor(
@@ -195,7 +197,7 @@ function utils.draw_icon_button(id, icon, size)
         textY = minY + ((maxY - minY) - textH) * 0.5
     end
 
-    imgui.GetWindowDrawList():AddText({ textX, textY }, 0xFFFFFFFF, icon)
+    imgui.GetWindowDrawList():AddText({ textX, textY }, utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), icon)
 
     return clicked
 end
@@ -254,8 +256,8 @@ function utils.draw_rotated_texture(drawList, texturePtr, centerX, centerY, size
     local sin_angle = math.sin(angle)
     local corners = {
         { x = -halfSize, y = -halfSize },
-        { x = halfSize, y = -halfSize },
-        { x = halfSize, y = halfSize },
+        { x = halfSize,  y = -halfSize },
+        { x = halfSize,  y = halfSize },
         { x = -halfSize, y = halfSize },
     }
     local rotated = {}

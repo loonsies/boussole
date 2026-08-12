@@ -1,5 +1,5 @@
 addon.name = 'boussole'
-addon.version = "1.12"
+addon.version = '1.12'
 addon.author = 'looney'
 addon.desc = 'Replacement for in-game map with additional features.'
 addon.link = 'https://github.com/loonsies/boussole'
@@ -181,6 +181,21 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
                 boussole.last_floor_id = current_floor_id
             end
         end
+    end
+
+    -- Check if player is moving for minimap recentering/main window transparency
+    boussole.isMoving = false
+    local x, y, z = map.get_player_position()
+    if x and boussole.last_player_pos then
+        local dx = x - boussole.last_player_pos.x
+        local dy = y - boussole.last_player_pos.y
+        if math.sqrt(dx * dx + dy * dy) > 0.01 then
+            boussole.isMoving = true
+        end
+    end
+
+    if x then
+        boussole.last_player_pos = { x = x, y = y, z = z }
     end
 
     ui.update()

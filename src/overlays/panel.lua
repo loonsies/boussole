@@ -52,8 +52,8 @@ local function draw_display_toggle(label, displaySetting, labelSetting, id, colo
     local spacing = 4
     local enabled = displaySetting[1]
     local labelEnabled = enabled and labelSetting[1]
-    local iconColor = enabled and utils.rgb_to_abgr(colorSetting) or 0xFF777777
-    local nameColor = labelEnabled and utils.rgb_to_abgr(colorSetting) or 0xFF777777
+    local iconColor = enabled and utils.rgb_to_abgr(colorSetting) or utils.rgb_to_abgr({ 0.466, 0.466, 0.466, 1.0 })
+    local nameColor = labelEnabled and utils.rgb_to_abgr(colorSetting) or utils.rgb_to_abgr({ 0.466, 0.466, 0.466, 1.0 })
     local buttonColor = utils.rgb_to_abgr(boussole.config.colorControlsBtn)
     local hoverColor = utils.rgb_to_abgr({ 0.36, 0.36, 0.36, 0.75 })
     local activeColor = utils.rgb_to_abgr({ 0.42, 0.42, 0.42, 0.85 })
@@ -747,6 +747,15 @@ local function draw_display_tab()
         settings.save()
     end
     imgui.PopItemWidth()
+
+    if imgui.Checkbox('Transparent when player moves', boussole.config.transparentWhenMoving) then settings.save() end
+    if boussole.config.transparentWhenMoving[1] then
+        imgui.PushItemWidth(100)
+        if imgui.SliderFloat('Transparency##Moving', boussole.config.movingTransparency, 0.0, 1.0, '%.2f') then
+            settings.save()
+        end
+        imgui.PopItemWidth()
+    end
 
     -- Display Options
     imgui.SeparatorText(ICON_FA_FILTER .. ' Display options')
@@ -1685,7 +1694,7 @@ function panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMax
     local color = utils.rgb_to_abgr(baseColor)
     local hover = { baseColor[1], baseColor[2], baseColor[3], math.min(1.0, (baseColor[4] or 1.0) + 0.2) }
     local hoverColor = utils.rgb_to_abgr(hover)
-    local buttonTextColor = 0xFFFFFFFF
+    local buttonTextColor = utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 })
 
     -- Check if mouse is over toggle button or panel
     local mousePosX, mousePosY = imgui.GetMousePos()

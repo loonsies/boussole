@@ -26,7 +26,6 @@ minimap.is_dragging = false
 minimap.drag_start = { x = 0, y = 0 }
 minimap.is_manually_panned = false
 minimap.last_pan_time = 0.0
-minimap.last_player_pos = nil
 minimap.is_recentering = false
 minimap.last_frame_time = 0.0
 
@@ -371,24 +370,15 @@ function minimap.update()
             local timeout = boussole.config.minimapRecenterTimeout and boussole.config.minimapRecenterTimeout[1] or 5.0
             -- Optional: recenter when player moves significantly
             local recenterOnMove = boussole.config.minimapRecenterOnMove == nil or boussole.config.minimapRecenterOnMove[1]
-            if recenterOnMove and playerX and minimap.last_player_pos then
-                local dx = playerX - minimap.last_player_pos.x
-                local dy = playerY - minimap.last_player_pos.y
-                if math.sqrt(dx * dx + dy * dy) > 0.5 then
-                    minimap.is_manually_panned = false
-                    minimap.is_recentering = true
-                end
+            if recenterOnMove and boussole.isMoving then
+                minimap.is_manually_panned = false
+                minimap.is_recentering = true
             end
             -- Recenter on timeout (0 = disabled)
             if timeout > 0 and (os.clock() - minimap.last_pan_time) >= timeout then
                 minimap.is_manually_panned = false
                 minimap.is_recentering = true
             end
-        end
-
-        -- Only update reference position when not manually panned, so the recenter-on-move delta accumulates from the moment panning began
-        if playerX and not minimap.is_manually_panned then
-            minimap.last_player_pos = { x = playerX, y = playerY }
         end
 
         -- Apply offset: smooth lerp toward center, snap to center, or hold manual position

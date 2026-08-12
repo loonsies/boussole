@@ -87,7 +87,7 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
 
                         local markerRadius = contextConfig.iconSizeHomepoint[1] or 8.0
                         local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorHomepoint), contextAlpha)
-                        local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
+                        local outlineColor = utils.mul_alpha(utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), contextAlpha)
 
                         utils.draw_diamond_marker(drawList, screenX, screenY, markerRadius, markerColor, outlineColor)
 
@@ -143,7 +143,7 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
 
                         local markerRadius = contextConfig.iconSizeSurvivalGuide[1] or 8.0
                         local markerColor = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorSurvivalGuide), contextAlpha)
-                        local outlineColor = utils.mul_alpha(0xFFFFFFFF, contextAlpha)
+                        local outlineColor = utils.mul_alpha(utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), contextAlpha)
 
                         utils.draw_square_marker(drawList, screenX, screenY, markerRadius, markerColor, outlineColor, 1.5)
 

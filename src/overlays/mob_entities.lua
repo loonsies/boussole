@@ -77,7 +77,7 @@ function mob_entities.draw(contextConfig, mapData, windowPosX, windowPosY, conte
 
                         local colorU32 = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorMobEntity), contextAlpha)
 
-                        utils.draw_circle_marker(drawList, screenX, screenY, iconSize, colorU32, utils.mul_alpha(0xFF000000, contextAlpha), 2.0)
+                        utils.draw_circle_marker(drawList, screenX, screenY, iconSize, colorU32, utils.mul_alpha(utils.rgb_to_abgr({ 0.0, 0.0, 0.0, 1.0 }), contextAlpha), 2.0)
 
                         -- Add to tooltip if hovering
                         local mousePosX, mousePosY = imgui.GetMousePos()
