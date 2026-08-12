@@ -58,6 +58,7 @@ local default = T {
     trackerDefaultColor = { 0.0, 0.5, 0.25, 1.0 },
     npcEntityTimeout = { 20 },
     mobEntityTimeout = { 20 },
+    sameFloorExceptions = {},
     minimapVisible = { false },
     minimapLocked = { false },
     minimapSize = { 200 },

@@ -12,6 +12,7 @@ local party_overlay = require('src.overlays.party')
 local alliance_overlay = require('src.overlays.alliance')
 local warp_overlay = require('src.overlays.warp')
 local custom_points = require('src.overlays.custom_points')
+local same_floor_exceptions = require('src.same_floor_exceptions')
 local npc_entities = require('src.overlays.npc_entities')
 local mob_entities = require('src.overlays.mob_entities')
 local tracked_entities = require('src.overlays.tracked_entities')
@@ -531,6 +532,7 @@ function ui.drawUI()
                 custom_points.draw_popup()
 
                 map_data_editor.draw_window()
+                same_floor_exceptions.draw_window()
 
                 ui.save_view_state_debounce()
             end

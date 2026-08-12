@@ -53,7 +53,8 @@ function npc_entities.draw(contextConfig, mapData, windowPosX, windowPosY, conte
             end
 
             if targetPosition ~= nil then
-                local onSameFloor = activeEntity and activeEntity.floor == boussole.last_floor_id or (enemyEntity and map.get_floor_id(targetPosition.x, targetPosition.y, targetPosition.z) == boussole.last_floor_id)
+                local isException = boussole.config.sameFloorExceptions and boussole.config.sameFloorExceptions[playerZone] and boussole.config.sameFloorExceptions[playerZone].npc
+                local onSameFloor = isException or (activeEntity and activeEntity.floor == boussole.last_floor_id or (enemyEntity and map.get_floor_id(targetPosition.x, targetPosition.y, targetPosition.z) == boussole.last_floor_id))
 
                 -- Don't draw entities considered to be on a different floor
                 if onSameFloor then

@@ -11,6 +11,7 @@ local tracker = require('src.tracker')
 local controls = require('src.overlays.controls')
 local texture = require('src.texture')
 local custom_points = require('src.overlays.custom_points')
+local same_floor_exceptions = require('src.same_floor_exceptions')
 local d3d8 = require('d3d8')
 local ffi = require('ffi')
 
@@ -1399,6 +1400,13 @@ local function draw_misc_tab(selZoneId)
         else
             boussole.mapDataEditor.visible[1] = true
         end
+    end
+
+    if imgui.Button(ICON_FA_SHIELD_HALVED .. ' Same floor exceptions editor', { -1, 0 }) then
+        same_floor_exceptions.show_window[1] = not same_floor_exceptions.show_window[1]
+    end
+    if imgui.IsItemHovered() then
+        imgui.SetTooltip('By default, NPCs and mobs that are on a different floor than the player will not be drawn. Add zones to the list to override this behavior.')
     end
     imgui.Spacing()
 
