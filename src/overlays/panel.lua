@@ -979,7 +979,7 @@ local function draw_points_tab()
 
                         -- Context menu
                         if imgui.BeginPopupContextItem('ctx_' .. entry.id) then
-                            imgui.TextDisabled(label)
+                            imgui.TextDisabled(rawLabel)
                             imgui.Separator()
                             if isFolder then
                                 if aligned_menu_item(ICON_FA_FOLDER_PLUS, 'New folder') then
