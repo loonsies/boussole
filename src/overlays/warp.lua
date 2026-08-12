@@ -51,7 +51,6 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
                 -- Populate floor for homepoints if not already set
                 if not point.floor then
                     point.floor = map.get_floor_id(point.posx, point.posy, point.posz)
-                    print(string.format('Homepoint #%d floor set to %d', idx, point.floor))
                 end
 
                 local onSameFloor = point.floor == boussole.last_floor_id
@@ -108,7 +107,6 @@ function warp_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, conte
                 -- Populate floor for survival guides if not already set
                 if not point.floor then
                     point.floor = map.get_floor_id(point.posx, point.posy, point.posz)
-                    print(string.format('Survival Guide #%d floor set to %d', idx, point.floor))
                 end
 
                 local onSameFloor = point.floor == boussole.last_floor_id
