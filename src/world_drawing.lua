@@ -14,16 +14,15 @@ ffi.cdef [[
     };
 ]]
 
-local d3d8dev = d3d.get_device()
-if not d3d8dev then
-    return drawing
-end
-
 local vertFormatMask = bit.bor(C.D3DFVF_XYZ, C.D3DFVF_DIFFUSE)
 local vertFormat = ffi.new('struct VertFormatXYZD')
 
-local function begin_draw(options)
+local function with_draw_state(options, func)
+    local d3d8dev = d3d.get_device()
+    if not d3d8dev then return end
+
     local opts = options or {}
+
     local oldWorld = select(2, d3d8dev:GetTransform(C.D3DTS_WORLD))
     if not oldWorld then
         oldWorld = ffi.new('D3DMATRIX', {
@@ -75,15 +74,15 @@ local function begin_draw(options)
     end
     d3d8dev:SetVertexShader(vertFormatMask)
 
-    return function ()
-        d3d8dev:SetVertexShader(oldShader[1])
-        d3d8dev:SetRenderState(C.D3DRS_ALPHABLENDENABLE, oldAlpha[1])
-        d3d8dev:SetRenderState(C.D3DRS_SRCBLEND, oldSrcBlend[1])
-        d3d8dev:SetRenderState(C.D3DRS_DESTBLEND, oldDestBlend[1])
-        d3d8dev:SetRenderState(C.D3DRS_CULLMODE, oldCull[1])
-        d3d8dev:SetRenderState(C.D3DRS_ZWRITEENABLE, oldZWrite[1])
-        d3d8dev:SetTransform(C.D3DTS_WORLD, oldWorld)
-    end
+    func(d3d8dev)
+
+    d3d8dev:SetVertexShader(oldShader[1])
+    d3d8dev:SetRenderState(C.D3DRS_ALPHABLENDENABLE, oldAlpha[1])
+    d3d8dev:SetRenderState(C.D3DRS_SRCBLEND, oldSrcBlend[1])
+    d3d8dev:SetRenderState(C.D3DRS_DESTBLEND, oldDestBlend[1])
+    d3d8dev:SetRenderState(C.D3DRS_CULLMODE, oldCull[1])
+    d3d8dev:SetRenderState(C.D3DRS_ZWRITEENABLE, oldZWrite[1])
+    d3d8dev:SetTransform(C.D3DTS_WORLD, oldWorld)
 end
 
 local function make_vertex(x, y, z, color)
@@ -96,9 +95,9 @@ function drawing.DrawLine(self, origin, destination, color)
         make_vertex(destination.X, destination.Y, destination.Z, color)
     })
 
-    local restore = begin_draw()
-    d3d8dev:DrawPrimitiveUP(C.D3DPT_LINELIST, 1, vertices, ffi.sizeof(vertFormat))
-    restore()
+    with_draw_state({}, function (dev)
+        dev:DrawPrimitiveUP(C.D3DPT_LINELIST, 1, vertices, ffi.sizeof(vertFormat))
+    end)
 end
 
 function drawing.DrawBox(self, minX, minY, minZ, maxX, maxY, maxZ, colors)
@@ -173,9 +172,9 @@ function drawing.DrawBox(self, minX, minY, minZ, maxX, maxY, maxZ, colors)
         vertices[i - 1] = ffi.new('struct VertFormatXYZD', verts[i])
     end
 
-    local restore = begin_draw({ disableDepthWrite = true })
-    d3d8dev:DrawPrimitiveUP(C.D3DPT_TRIANGLELIST, #verts / 3, vertices, ffi.sizeof(vertFormat))
-    restore()
+    with_draw_state({ disableDepthWrite = true }, function (dev)
+        dev:DrawPrimitiveUP(C.D3DPT_TRIANGLELIST, #verts / 3, vertices, ffi.sizeof(vertFormat))
+    end)
 end
 
 return drawing
