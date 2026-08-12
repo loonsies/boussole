@@ -340,11 +340,19 @@ function ui.drawUI()
                                 local mapX = texMouseX * scale + map.current_map_data.entry.OffsetX
                                 local mapY = texMouseY * scale + map.current_map_data.entry.OffsetY
 
-                                custom_points.open_add_popup(
-                                    map.current_map_data.entry.ZoneId,
-                                    map.current_map_data.entry.FloorId,
-                                    mapX, mapY
-                                )
+                                if custom_points.reposition_state and custom_points.reposition_state.entry then
+                                    local entry = custom_points.reposition_state.entry
+                                    entry.mapX = mapX
+                                    entry.mapY = mapY
+                                    custom_points.save_custom_points()
+                                    custom_points.reposition_state = nil
+                                else
+                                    custom_points.open_add_popup(
+                                        map.current_map_data.entry.ZoneId,
+                                        map.current_map_data.entry.FloorId,
+                                        mapX, mapY
+                                    )
+                                end
                             end
                         end
                     else
@@ -519,6 +527,43 @@ function ui.drawUI()
 
                         tooltip.add_line(string.format('(%s-%d)', gridX, gridY))
                     end
+                end
+
+                -- Draw repositioning indicator
+                if custom_points.reposition_state and custom_points.reposition_state.entry then
+                    local entryName = custom_points.reposition_state.entry.name or '(unnamed)'
+                    local repText = string.format('Repositioning custom point: %s\nDouble right-click to place', entryName)
+
+                    local fontScale = boussole.config.infoPanelFontSize[1] / 13.0
+                    local defaultFont = imgui.GetFont()
+                    local defaultSize = imgui.GetFontSize()
+                    imgui.PushFont(defaultFont, defaultSize * fontScale)
+
+                    local textW, textH = imgui.CalcTextSize(repText)
+                    local padding = 8
+                    local centerX = windowPosX + contentMinX + (availWidth / 2)
+                    local topY = windowPosY + contentMinY + 10
+
+                    local bgX = centerX - (textW / 2) - padding
+                    local bgY = topY
+                    local bgWidth = textW + (padding * 2)
+                    local bgHeight = textH + (padding * 2)
+
+                    local drawList = imgui.GetWindowDrawList()
+                    local bgColor = utils.rgb_to_abgr(boussole.config.colorInfoPanelBg)
+                    drawList:AddRectFilled(
+                        { bgX, bgY },
+                        { bgX + bgWidth, bgY + bgHeight },
+                        bgColor,
+                        3.0
+                    )
+
+                    imgui.SetCursorPos({ centerX - (textW / 2) - windowPosX, topY + padding - windowPosY })
+                    imgui.PushStyleColor(ImGuiCol_Text, utils.rgb_to_abgr(boussole.config.colorInfoPanelText))
+                    imgui.Text(repText)
+                    imgui.PopStyleColor()
+
+                    imgui.PopFont()
                 end
 
                 panel.draw(windowPosX, windowPosY, contentMinX, contentMinY, contentMaxX, contentMaxY)

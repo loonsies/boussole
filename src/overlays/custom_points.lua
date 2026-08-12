@@ -1,4 +1,6 @@
-local custom_points = {}
+local custom_points = {
+    reposition_state = nil -- { entry = point_entry } when a point is waiting for a new click
+}
 
 local imgui = require('imgui')
 local chat = require('chat')
@@ -450,7 +452,7 @@ end
 function custom_points.draw_icon(drawList, screenX, screenY, shape, size, color, imageName, applyColor)
     if shape == 1 then -- Dot
         drawList:AddCircleFilled({ screenX, screenY }, size, color)
-        drawList:AddCircle({ screenX, screenY }, size, utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0}), 0, 1.0)
+        drawList:AddCircle({ screenX, screenY }, size, utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), 0, 1.0)
     elseif shape == 2 then -- Square
         local halfSize = size * 0.8
         drawList:AddRectFilled(
@@ -461,7 +463,7 @@ function custom_points.draw_icon(drawList, screenX, screenY, shape, size, color,
         drawList:AddRect(
             { screenX - halfSize, screenY - halfSize },
             { screenX + halfSize, screenY + halfSize },
-            utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0}), 0.0, 0, 1.5
+            utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), 0.0, 0, 1.5
         )
     elseif shape == 3 then -- Triangle
         drawList:AddTriangleFilled(
@@ -474,7 +476,7 @@ function custom_points.draw_icon(drawList, screenX, screenY, shape, size, color,
             { screenX, screenY - size },
             { screenX - size * 0.866, screenY + size * 0.5 },
             { screenX + size * 0.866, screenY + size * 0.5 },
-            utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0}), 1.5
+            utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), 1.5
         )
     elseif shape == 4 then -- Diamond
         drawList:AddTriangleFilled(
@@ -501,10 +503,10 @@ function custom_points.draw_icon(drawList, screenX, screenY, shape, size, color,
             { screenX, screenY },
             color
         )
-        drawList:AddLine({ screenX, screenY - size }, { screenX - size * 0.7, screenY }, utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0}), 1.0)
-        drawList:AddLine({ screenX - size * 0.7, screenY }, { screenX, screenY + size }, utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0}), 1.0)
-        drawList:AddLine({ screenX, screenY + size }, { screenX + size * 0.7, screenY }, utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0}), 1.0)
-        drawList:AddLine({ screenX + size * 0.7, screenY }, { screenX, screenY - size }, utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0}), 1.0)
+        drawList:AddLine({ screenX, screenY - size }, { screenX - size * 0.7, screenY }, utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), 1.0)
+        drawList:AddLine({ screenX - size * 0.7, screenY }, { screenX, screenY + size }, utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), 1.0)
+        drawList:AddLine({ screenX, screenY + size }, { screenX + size * 0.7, screenY }, utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), 1.0)
+        drawList:AddLine({ screenX + size * 0.7, screenY }, { screenX, screenY - size }, utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), 1.0)
     elseif shape == 5 then          -- Cross (tilted 45 degrees)
         local thickness = size * 0.3
         local offset = size * 0.707 -- cos(45°) ≈ 0.707
@@ -518,7 +520,7 @@ function custom_points.draw_icon(drawList, screenX, screenY, shape, size, color,
                 -- Draw custom image
                 local halfSize = size
                 local texture = ffi.cast('IDirect3DTexture8*', textureId)
-                local imageColor = applyColor and color or utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0})
+                local imageColor = applyColor and color or utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 })
                 drawList:AddImage(
                     textureId,
                     { screenX - halfSize, screenY - halfSize },
@@ -532,7 +534,7 @@ function custom_points.draw_icon(drawList, screenX, screenY, shape, size, color,
         end
         -- Fall back to dot if image doesn't exist
         drawList:AddCircleFilled({ screenX, screenY }, size, color)
-        drawList:AddCircle({ screenX, screenY }, size, utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0}), 0, 1.0)
+        drawList:AddCircle({ screenX, screenY }, size, utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 }), 0, 1.0)
     end
 end
 
@@ -683,6 +685,22 @@ function custom_points.draw_popup()
         if imgui.Button('Cancel', { buttonWidth, 0 }) then
             custom_points.popup_state.open = false
         end
+
+        if custom_points.popup_state.editing and not custom_points.popup_state.isFolder then
+            imgui.SameLine()
+            if imgui.Button('Reposition', { buttonWidth + 20, 0 }) then
+                local mapKey = custom_points.get_map_key(custom_points.popup_state.zoneId, custom_points.popup_state.floorId)
+                local points = custom_points.data[mapKey]
+                if points then
+                    local entry = find_item_and_parent(points, custom_points.popup_state.pointId)
+                    if entry then
+                        custom_points.reposition_state = { entry = entry }
+                        custom_points.popup_state.open = false
+                    end
+                end
+            end
+        end
+
         -- Delete button
         if custom_points.popup_state.editing then
             local text = custom_points.popup_state.isFolder and 'Delete folder' or 'Delete point'
@@ -776,8 +794,7 @@ end
 -- Global clipboard copy
 function custom_points.copy_item(item)
     if not item then return end
-    local j = json.encode(item)
-    imgui.SetClipboardText(j)
+    imgui.SetClipboardText(json.encode(item))
 end
 
 -- Global clipboard paste
