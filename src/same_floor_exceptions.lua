@@ -1,11 +1,10 @@
-local imgui = require('imgui')
-local ffi = require('ffi')
-local settings = require('settings')
-local zones = require('data.zones')
-
 local same_floor_exceptions = {
     show_window = { false }
 }
+
+local imgui = require('imgui')
+local settings = require('settings')
+local zones = require('data.zones')
 
 local exceptionSearchText = { '' }
 local exceptionSelectedZone = { 0 }

@@ -1,6 +1,6 @@
-local settings = require('settings')
-
 local config = {}
+
+local settings = require('settings')
 
 local default = T {
     showHomepoints = { true },

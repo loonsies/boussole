@@ -1,4 +1,5 @@
 local controls = {}
+
 local imgui = require('imgui')
 local utils = require('src.utils')
 local settings = require('settings')
@@ -152,7 +153,7 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
         local texturePointer = tonumber(ffi.cast('uint32_t', controls.cursor_alt_texture))
         local iconColor = centerActive and
             utils.rgb_to_abgr(boussole.config.colorControlsBtnActive) or
-            utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0})
+            utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 })
 
         drawList:AddImageQuad(
             texturePointer,
@@ -202,7 +203,7 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
             { btn2PosX + offsetX + iconSize, btn2PosY + offsetY + iconSize },
             { 0, 0 },
             { 1, 1 },
-            utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0})
+            utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 })
         )
     end
 
@@ -239,7 +240,7 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
         local texturePointer = tonumber(ffi.cast('uint32_t', controls.tag_texture))
         local iconColor = labelsActive and
             utils.rgb_to_abgr(boussole.config.colorControlsBtnActive) or
-            utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0})
+            utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 })
 
         drawList:AddImage(
             texturePointer,
@@ -285,7 +286,7 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
             { btn4PosX + offsetX + iconSize, btn4PosY + offsetY + iconSize },
             { 0, 0 },
             { 1, 1 },
-            utils.rgb_to_abgr({1.0, 1.0, 1.0, 1.0})
+            utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 })
         )
     end
 

@@ -215,20 +215,21 @@ function custom_points.load_custom_image(imageName)
 
     -- Check if already cached
     if custom_points.texture_cache[imageName] then
-        return custom_points.texture_cache[imageName]
+        return tonumber(ffi.cast('uint32_t', custom_points.texture_cache[imageName]))
     end
 
     -- Try to load the image
     local d3d8dev = d3d8.get_device()
     if not d3d8dev then return nil end
 
-    local texture_ptr = ffi.new('IDirect3DTexture8*[1]')
-    local hr = ffi.C.D3DXCreateTextureFromFileA(d3d8dev, imagePath, texture_ptr)
+    local texture = require('src.texture')
+    local gcTexture, texture_data, err = texture.load_texture_from_file(imagePath, d3d8dev)
 
-    if hr == 0 then -- S_OK
-        local texture_id = tonumber(ffi.cast('uint32_t', texture_ptr[0]))
-        custom_points.texture_cache[imageName] = texture_id
-        return texture_id
+    if gcTexture and texture_data then
+        custom_points.texture_cache[imageName] = gcTexture
+        return tonumber(ffi.cast('uint32_t', gcTexture))
+    else
+        print(chat.header(addon.name):append(chat.error(string.format('Failed to load custom point image "%s": %s', imageName, err or 'unknown error'))))
     end
 
     return nil
@@ -237,10 +238,6 @@ end
 -- Clear texture cache for a specific image
 function custom_points.clear_texture_cache(imageName)
     if custom_points.texture_cache[imageName] then
-        local texture = ffi.cast('IDirect3DTexture8*', custom_points.texture_cache[imageName])
-        if texture ~= nil then
-            texture:Release()
-        end
         custom_points.texture_cache[imageName] = nil
     end
 end
@@ -523,7 +520,6 @@ function custom_points.draw_icon(drawList, screenX, screenY, shape, size, color,
             if textureId then
                 -- Draw custom image
                 local halfSize = size
-                local texture = ffi.cast('IDirect3DTexture8*', textureId)
                 local imageColor = applyColor and color or utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 })
                 drawList:AddImage(
                     textureId,

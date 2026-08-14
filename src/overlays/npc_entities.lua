@@ -1,11 +1,10 @@
 local npc_entities = {}
+
 local tracker = require('src.tracker')
 local utils = require('src.utils')
 local imgui = require('imgui')
 local map = require('src.map')
 local tooltip = require('src.overlays.tooltip')
-
-local npc_entities = {}
 
 function npc_entities.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
     contextConfig = contextConfig or boussole.config

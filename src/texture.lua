@@ -1,10 +1,11 @@
+local texture = {}
+
 local ffi = require('ffi')
 local d3d8 = require('d3d8')
 local map = require('src.map')
 local chat = require('chat')
 
 local C = ffi.C;
-local texture = {}
 
 -- Image header structure (48 bytes)
 ffi.cdef [[
@@ -398,11 +399,11 @@ function texture.load_map_texture(map_data)
         local customPath = texture.get_custom_map_path(map_data)
         if customPath then
             gcTexture, texture_data, err = texture.load_texture_from_file(customPath, d3d8dev)
-            if gcTexture then
+            if gcTexture and texture_data then
                 return gcTexture, texture_data, nil
             else
                 -- Failed to load custom map, fall back to DAT
-                err = string.format('Failed to load custom map, falling back to DAT: %s', err)
+                print(chat.header(addon.name):append(chat.error(string.format('Failed to load custom map, falling back to DAT: %s', err))))
             end
         end
     end
@@ -427,16 +428,18 @@ function texture.load_map_texture(map_data)
 end
 
 function texture.load_nomap_texture()
-    local d3d8dev = d3d8.get_device()
     local nomap_path = string.format('%saddons\\boussole\\assets\\nomap.png', AshitaCore:GetInstallPath())
-
-    local gcTexture, texture_data, err = texture.load_texture_from_file(nomap_path, d3d8dev)
-
-    if not gcTexture then
-        return nil, nil, string.format('Failed to load nomap.png: %s', err)
+    local d3d8dev = d3d8.get_device()
+    if not d3d8dev then
+        return false
     end
 
-    return gcTexture, texture_data, nil
+    local gcTexture, texture_data, err = texture.load_texture_from_file(nomap_path, d3d8dev)
+    if gcTexture and texture_data then
+        return gcTexture, texture_data, nil
+    else
+        return nil, nil, string.format('Failed to load nomap.png: %s', err)
+    end
 end
 
 -- Load texture (map or nomap) and update UI state
@@ -477,6 +480,30 @@ function texture.load_and_set(ui_state, map_data)
         return true
     else
         print(chat.header(addon.name):append(chat.error(err)))
+        return false
+    end
+end
+
+function texture.load_cursor_texture(overlay)
+    if overlay.cursor_texture then
+        return true
+    end
+
+    local cursor_path = string.format('%saddons\\boussole\\assets\\cursor.png', AshitaCore:GetInstallPath())
+    local d3d8dev = d3d8.get_device()
+    if not d3d8dev then
+        return false
+    end
+
+    local texture = require('src.texture')
+    local gcTexture, texture_data, err = texture.load_texture_from_file(cursor_path, d3d8dev)
+    if gcTexture and texture_data then
+        overlay.cursor_texture = gcTexture
+        overlay.cursor_width = texture_data.width
+        overlay.cursor_height = texture_data.height
+        return true
+    else
+        print(chat.header(addon.name):append(chat.error(string.format('Failed to load cursor.png: %s', err or 'unknown error'))))
         return false
     end
 end

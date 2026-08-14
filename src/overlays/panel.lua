@@ -1,4 +1,5 @@
 local panel = {}
+
 local map = require('src.map')
 local regions = require('data.regions')
 local zones = require('data.zones')
@@ -36,10 +37,12 @@ local function load_panel_cursor_texture()
     end
 
     local cursor_path = string.format('%saddons\\boussole\\assets\\cursor.png', AshitaCore:GetInstallPath())
-    local gcTexture = texture.load_texture_from_file(cursor_path, d3d8dev)
-    if gcTexture then
+    local gcTexture, texture_data, err = texture.load_texture_from_file(cursor_path, d3d8dev)
+    if gcTexture and texture_data then
         panel_cursor_texture = gcTexture
         return true
+    else
+        print(chat.header(addon.name):append(chat.error(string.format('Failed to load cursor.png: %s', err or 'unknown error'))))
     end
 
     return false

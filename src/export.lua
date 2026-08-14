@@ -1,6 +1,6 @@
-local ffi = require('ffi')
-
 local export = {}
+
+local ffi = require('ffi')
 
 ffi.cdef [[
     int __stdcall CreateDirectoryA(const char* lpPathName, void* lpSecurityAttributes);

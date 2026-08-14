@@ -3,6 +3,8 @@ local utils = {}
 local imgui = require('imgui')
 local regionZones = require('data.regionZones')
 local regions = require('data.regions')
+local chat = require('chat')
+local d3d8 = require('d3d8')
 
 function utils.getRegionIDByZoneID(zoneID)
     for regionID, zoneIDs in pairs(regionZones.map) do

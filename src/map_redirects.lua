@@ -1,12 +1,11 @@
-local imgui = require('imgui')
-local ffi = require('ffi')
-local settings = require('settings')
-local map = require('src.map')
-local zones = require('data.zones')
-
 local map_redirects = {
     show_window = { false }
 }
+
+local imgui = require('imgui')
+local settings = require('settings')
+local map = require('src.map')
+local zones = require('data.zones')
 
 local sourceSearchText = { '' }
 local targetSearchText = { '' }

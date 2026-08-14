@@ -3,37 +3,13 @@ local party_overlay = {}
 local imgui = require('imgui')
 local map = require('src.map')
 local tooltip = require('src.overlays.tooltip')
-local texture = require('src.texture')
 local utils = require('src.utils')
-local d3d8 = require('d3d8')
+local texture = require('src.texture')
 local ffi = require('ffi')
 
 party_overlay.cursor_texture = nil
 party_overlay.cursor_width = 0
 party_overlay.cursor_height = 0
-
-function party_overlay.load_cursor_texture()
-    if party_overlay.cursor_texture then
-        return true
-    end
-
-    local cursor_path = string.format('%saddons\\boussole\\assets\\cursor.png', AshitaCore:GetInstallPath())
-    local d3d8dev = d3d8.get_device()
-    if not d3d8dev then
-        return false
-    end
-
-    local gcTexture, texture_data, err = texture.load_texture_from_file(cursor_path, d3d8dev)
-    if not gcTexture or not texture_data then
-        return false
-    end
-
-    party_overlay.cursor_texture = gcTexture
-    party_overlay.cursor_width = texture_data.width
-    party_overlay.cursor_height = texture_data.height
-
-    return true
-end
 
 function party_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
     contextConfig = contextConfig or boussole.config
@@ -54,7 +30,7 @@ function party_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, cont
     if (mapData.entry and mapData.entry.ZoneId ~= playerZone and not (mapData.entry._redirected and mapData.entry._originalZone == playerZone)) then return end
 
     if not party_overlay.cursor_texture then
-        party_overlay.load_cursor_texture()
+        texture.load_cursor_texture(party_overlay)
     end
 
     if not party_overlay.cursor_texture then

@@ -3,38 +3,13 @@ local player_overlay = {}
 local imgui = require('imgui')
 local map = require('src.map')
 local tooltip = require('src.overlays.tooltip')
-local texture = require('src.texture')
 local utils = require('src.utils')
-local d3d8 = require('d3d8')
+local texture = require('src.texture')
 local ffi = require('ffi')
 
 player_overlay.cursor_texture = nil
 player_overlay.cursor_width = 0
 player_overlay.cursor_height = 0
-
-function player_overlay.load_cursor_texture()
-    if player_overlay.cursor_texture then
-        return true
-    end
-
-    local cursor_path = string.format('%saddons\\boussole\\assets\\cursor.png', AshitaCore:GetInstallPath())
-    local d3d8dev = d3d8.get_device()
-    if not d3d8dev then
-        return false
-    end
-
-    local gcTexture, texture_data, err = texture.load_texture_from_file(cursor_path, d3d8dev)
-    if not gcTexture or not texture_data then
-        print(chat.header(addon.name):append(chat.error(string.format('Failed to load cursor.png: %s', err or 'unknown error'))))
-        return false
-    end
-
-    player_overlay.cursor_texture = gcTexture
-    player_overlay.cursor_width = texture_data.width
-    player_overlay.cursor_height = texture_data.height
-
-    return true
-end
 
 -- Draw player position
 function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
@@ -57,7 +32,7 @@ function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, con
     if (mapData.entry and mapData.entry.ZoneId ~= playerZone and not (mapData.entry._redirected and mapData.entry._originalZone == playerZone)) then return end
 
     if not player_overlay.cursor_texture then
-        player_overlay.load_cursor_texture()
+        texture.load_cursor_texture(player_overlay)
     end
 
     if not player_overlay.cursor_texture then

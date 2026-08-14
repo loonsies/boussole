@@ -1,4 +1,5 @@
 local tracked_entities = {}
+
 local tracker = require('src.tracker')
 local utils = require('src.utils')
 local imgui = require('imgui')

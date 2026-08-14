@@ -1,11 +1,10 @@
 local mob_entities = {}
+
 local tracker = require('src.tracker')
 local utils = require('src.utils')
 local imgui = require('imgui')
 local map = require('src.map')
 local tooltip = require('src.overlays.tooltip')
-
-local mob_entities = {}
 
 function mob_entities.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
     contextConfig = contextConfig or boussole.config

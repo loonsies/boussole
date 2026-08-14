@@ -1,6 +1,6 @@
-local settings = require('settings')
-
 local commands = {}
+
+local settings = require('settings')
 
 function commands.handleCommand(args)
     local command = string.lower(args[1])
