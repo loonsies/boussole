@@ -7,9 +7,7 @@ local utils = require('src.utils')
 local texture = require('src.texture')
 local ffi = require('ffi')
 
-party_overlay.cursor_texture = nil
-party_overlay.cursor_width = 0
-party_overlay.cursor_height = 0
+party_overlay.cursor = {}
 
 function party_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
     contextConfig = contextConfig or boussole.config
@@ -29,11 +27,11 @@ function party_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, cont
     local playerZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
     if (mapData.entry and mapData.entry.ZoneId ~= playerZone and not (mapData.entry._redirected and mapData.entry._originalZone == playerZone)) then return end
 
-    if not party_overlay.cursor_texture then
-        texture.load_cursor_texture(party_overlay)
+    if not party_overlay.cursor.texture then
+        texture.load_texture('cursor', party_overlay.cursor)
     end
 
-    if not party_overlay.cursor_texture then
+    if not party_overlay.cursor.texture then
         return
     end
 
@@ -45,7 +43,6 @@ function party_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, cont
 
     local cursorSize = contextConfig.iconSizeParty[1] or 20.0
     local halfSize = cursorSize / 2.0
-    local texturePointer = tonumber(ffi.cast('uint32_t', party_overlay.cursor_texture))
 
     for i = 1, 5 do
         if partyMgr:GetMemberIsActive(i) == 1 then
@@ -95,9 +92,9 @@ function party_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, cont
                             end
                         end
 
-                        if texturePointer then
+                        if party_overlay.cursor.pointer then
                             local color = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorParty), contextAlpha)
-                            utils.draw_rotated_texture(drawList, texturePointer, screenX, screenY, cursorSize, heading, color)
+                            utils.draw_rotated_texture(drawList, party_overlay.cursor.pointer, screenX, screenY, cursorSize, heading, color)
                         end
                     end
                 end

@@ -134,12 +134,12 @@ local function draw_controls(windowPosX, windowPosY, contentMinX, contentMinY, a
     local btn1Hovered = imgui.IsItemHovered()
     imgui.PopStyleColor(3)
 
-    if controls.tag_texture then
+    if controls.tag_icon.texture then
         local drawList  = imgui.GetWindowDrawList()
         local iconSize  = buttonSize * 0.7
         local offsetX   = (buttonSize - iconSize) / 2
         local offsetY   = (buttonSize - iconSize) / 2
-        local texPtr    = tonumber(ffi.cast('uint32_t', controls.tag_texture))
+        local texPtr    = tonumber(ffi.cast('uint32_t', controls.tag_icon.pointer))
         local iconColor = labelsActive and utils.rgb_to_abgr(boussole.config.minimapColorControlsBtnActive) or 0xFFFFFFFF
         drawList:AddImage(texPtr,
             { startX + offsetX, startY + offsetY },
@@ -162,13 +162,13 @@ local function draw_controls(windowPosX, windowPosY, contentMinX, contentMinY, a
     local btn2Hovered = imgui.IsItemHovered()
     imgui.PopStyleColor(3)
 
-    if controls.reset_texture then
+    if controls.reset_icon.texture then
         local drawList = imgui.GetWindowDrawList()
         local btn2PosX = startX + buttonSize + spacing
         local iconSize = buttonSize * 0.7
         local offsetX  = (buttonSize - iconSize) / 2
         local offsetY  = (buttonSize - iconSize) / 2
-        local texPtr   = tonumber(ffi.cast('uint32_t', controls.reset_texture))
+        local texPtr   = tonumber(ffi.cast('uint32_t', controls.reset_icon.pointer))
         drawList:AddImage(texPtr,
             { btn2PosX + offsetX, startY + offsetY },
             { btn2PosX + offsetX + iconSize, startY + offsetY + iconSize },

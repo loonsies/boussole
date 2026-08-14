@@ -1,90 +1,34 @@
-local controls = {}
+local controls = {
+    cursor_icon = {},
+    center_icon = {},
+    tag_icon = {},
+    reset_icon = {},
+}
 
 local imgui = require('imgui')
 local utils = require('src.utils')
 local settings = require('settings')
 local texture = require('src.texture')
-local d3d8 = require('d3d8')
-local ffi = require('ffi')
-
-controls.cursor_alt_texture = nil
-controls.cursor_alt_width = 0
-controls.cursor_alt_height = 0
-
-controls.center_texture = nil
-controls.center_width = 0
-controls.center_height = 0
-
-controls.tag_texture = nil
-controls.tag_width = 0
-controls.tag_height = 0
-
-controls.reset_texture = nil
-controls.reset_width = 0
-controls.reset_height = 0
 
 function controls.load_textures()
-    if controls.cursor_alt_texture and controls.center_texture and controls.tag_texture and controls.reset_texture then
-        return true
+    if not controls.cursor_icon.texture then
+        texture.load_texture('cursor_alt', controls.cursor_icon)
     end
-
-    local d3d8dev = d3d8.get_device()
-    if not d3d8dev then
-        return false
+    if not controls.center_icon.texture then
+        texture.load_texture('center', controls.center_icon)
     end
-
-    -- Load cursor_alt.png for button 1
-    if not controls.cursor_alt_texture then
-        local cursor_alt_path = string.format('%saddons\\boussole\\assets\\cursor_alt.png', AshitaCore:GetInstallPath())
-        local gcTexture, texture_data, err = texture.load_texture_from_file(cursor_alt_path, d3d8dev)
-        if gcTexture and texture_data then
-            controls.cursor_alt_texture = gcTexture
-            controls.cursor_alt_width = texture_data.width
-            controls.cursor_alt_height = texture_data.height
-        end
+    if not controls.tag_icon.texture then
+        texture.load_texture('tag', controls.tag_icon)
     end
-
-    -- Load center.png for button 2
-    if not controls.center_texture then
-        local center_path = string.format('%saddons\\boussole\\assets\\center.png', AshitaCore:GetInstallPath())
-        local gcTexture, texture_data, err = texture.load_texture_from_file(center_path, d3d8dev)
-        if gcTexture and texture_data then
-            controls.center_texture = gcTexture
-            controls.center_width = texture_data.width
-            controls.center_height = texture_data.height
-        end
+    if not controls.reset_icon.texture then
+        texture.load_texture('reset', controls.reset_icon)
     end
-
-    -- Load tag.png for button 3
-    if not controls.tag_texture then
-        local tag_path = string.format('%saddons\\boussole\\assets\\tag.png', AshitaCore:GetInstallPath())
-        local gcTexture, texture_data, err = texture.load_texture_from_file(tag_path, d3d8dev)
-        if gcTexture and texture_data then
-            controls.tag_texture = gcTexture
-            controls.tag_width = texture_data.width
-            controls.tag_height = texture_data.height
-        end
-    end
-
-    -- Load reset.png for button 4
-    if not controls.reset_texture then
-        local reset_path = string.format('%saddons\\boussole\\assets\\reset.png', AshitaCore:GetInstallPath())
-        local gcTexture, texture_data, err = texture.load_texture_from_file(reset_path, d3d8dev)
-        if gcTexture and texture_data then
-            controls.reset_texture = gcTexture
-            controls.reset_width = texture_data.width
-            controls.reset_height = texture_data.height
-        end
-    end
-
-    return true
 end
 
 function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
     -- Load textures if not already loaded
-    if not controls.cursor_alt_texture or not controls.center_texture or not controls.tag_texture or not controls.reset_texture then
-        controls.load_textures()
-    end
+    controls.load_textures()
+
     local padding = 8
     local buttonSize = 28
     local spacing = 4
@@ -123,7 +67,7 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
     imgui.PopStyleColor(3)
 
     -- Draw cursor texture on top of button (rotated 45 degrees)
-    if controls.cursor_alt_texture then
+    if controls.cursor_icon.texture then
         local drawList = imgui.GetWindowDrawList()
         local btnPosX = startX + buttonSize / 2
         local btnPosY = startY + buttonSize / 2
@@ -150,13 +94,12 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
             }
         end
 
-        local texturePointer = tonumber(ffi.cast('uint32_t', controls.cursor_alt_texture))
         local iconColor = centerActive and
             utils.rgb_to_abgr(boussole.config.colorControlsBtnActive) or
             utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 })
 
         drawList:AddImageQuad(
-            texturePointer,
+            controls.cursor_icon.pointer,
             { rotated_corners[1].x, rotated_corners[1].y },
             { rotated_corners[2].x, rotated_corners[2].y },
             { rotated_corners[3].x, rotated_corners[3].y },
@@ -187,7 +130,7 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
     imgui.PopStyleColor(3)
 
     -- Draw center texture on top of button
-    if controls.center_texture then
+    if controls.center_icon.texture then
         local drawList = imgui.GetWindowDrawList()
         local btn2PosX = startX + buttonSize + spacing
         local btn2PosY = startY
@@ -195,10 +138,8 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
         local offsetX = (buttonSize - iconSize) / 2
         local offsetY = (buttonSize - iconSize) / 2
 
-        local texturePointer = tonumber(ffi.cast('uint32_t', controls.center_texture))
-
         drawList:AddImage(
-            texturePointer,
+            controls.center_icon.pointer,
             { btn2PosX + offsetX, btn2PosY + offsetY },
             { btn2PosX + offsetX + iconSize, btn2PosY + offsetY + iconSize },
             { 0, 0 },
@@ -229,7 +170,7 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
     imgui.PopStyleColor(3)
 
     -- Draw tag texture on top of button
-    if controls.tag_texture then
+    if controls.tag_icon.texture then
         local drawList = imgui.GetWindowDrawList()
         local btn3PosX = startX + (buttonSize + spacing) * 2
         local btn3PosY = startY
@@ -237,13 +178,12 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
         local offsetX = (buttonSize - iconSize) / 2
         local offsetY = (buttonSize - iconSize) / 2
 
-        local texturePointer = tonumber(ffi.cast('uint32_t', controls.tag_texture))
         local iconColor = labelsActive and
             utils.rgb_to_abgr(boussole.config.colorControlsBtnActive) or
             utils.rgb_to_abgr({ 1.0, 1.0, 1.0, 1.0 })
 
         drawList:AddImage(
-            texturePointer,
+            controls.tag_icon.pointer,
             { btn3PosX + offsetX, btn3PosY + offsetY },
             { btn3PosX + offsetX + iconSize, btn3PosY + offsetY + iconSize },
             { 0, 0 },
@@ -270,7 +210,7 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
     imgui.PopStyleColor(3)
 
     -- Draw reset texture on top of button
-    if controls.reset_texture then
+    if controls.reset_icon.texture then
         local drawList = imgui.GetWindowDrawList()
         local btn4PosX = startX + (buttonSize + spacing) * 3
         local btn4PosY = startY
@@ -278,10 +218,8 @@ function controls.draw(windowPosX, windowPosY, contentMinX, contentMinY)
         local offsetX = (buttonSize - iconSize) / 2
         local offsetY = (buttonSize - iconSize) / 2
 
-        local texturePointer = tonumber(ffi.cast('uint32_t', controls.reset_texture))
-
         drawList:AddImage(
-            texturePointer,
+            controls.reset_icon.pointer,
             { btn4PosX + offsetX, btn4PosY + offsetY },
             { btn4PosX + offsetX + iconSize, btn4PosY + offsetY + iconSize },
             { 0, 0 },

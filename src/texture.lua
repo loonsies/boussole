@@ -484,26 +484,27 @@ function texture.load_and_set(ui_state, map_data)
     end
 end
 
-function texture.load_cursor_texture(overlay)
-    if overlay.cursor_texture then
+function texture.load_texture(name, storage)
+    if storage and storage.texture then
         return true
     end
 
-    local cursor_path = string.format('%saddons\\boussole\\assets\\cursor.png', AshitaCore:GetInstallPath())
+    local path = string.format('%saddons\\boussole\\assets\\%s.png', AshitaCore:GetInstallPath(), name)
     local d3d8dev = d3d8.get_device()
     if not d3d8dev then
         return false
     end
 
     local texture = require('src.texture')
-    local gcTexture, texture_data, err = texture.load_texture_from_file(cursor_path, d3d8dev)
+    local gcTexture, texture_data, err = texture.load_texture_from_file(path, d3d8dev)
     if gcTexture and texture_data then
-        overlay.cursor_texture = gcTexture
-        overlay.cursor_width = texture_data.width
-        overlay.cursor_height = texture_data.height
+        storage.texture = gcTexture
+        storage.pointer = tonumber(ffi.cast('uint32_t', gcTexture))
+        storage.width = texture_data.width
+        storage.height = texture_data.height
         return true
     else
-        print(chat.header(addon.name):append(chat.error(string.format('Failed to load cursor.png: %s', err or 'unknown error'))))
+        print(chat.header(addon.name):append(chat.error(string.format('Failed to load %s.png: %s', name, err or 'unknown error'))))
         return false
     end
 end

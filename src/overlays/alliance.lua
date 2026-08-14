@@ -7,9 +7,7 @@ local utils = require('src.utils')
 local texture = require('src.texture')
 local ffi = require('ffi')
 
-alliance_overlay.cursor_texture = nil
-alliance_overlay.cursor_width = 0
-alliance_overlay.cursor_height = 0
+alliance_overlay.cursor = {}
 
 function alliance_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
     contextConfig = contextConfig or boussole.config
@@ -29,11 +27,11 @@ function alliance_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, c
     local playerZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
     if (mapData.entry and mapData.entry.ZoneId ~= playerZone and not (mapData.entry._redirected and mapData.entry._originalZone == playerZone)) then return end
 
-    if not alliance_overlay.cursor_texture then
-        texture.load_cursor_texture(alliance_overlay)
+    if not alliance_overlay.cursor.texture then
+        texture.load_texture('cursor', alliance_overlay.cursor)
     end
 
-    if not alliance_overlay.cursor_texture then
+    if not alliance_overlay.cursor.texture then
         return
     end
 
@@ -45,7 +43,6 @@ function alliance_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, c
 
     local cursorSize = contextConfig.iconSizeAlliance[1] or 20.0
     local halfSize = cursorSize / 2.0
-    local texturePointer = tonumber(ffi.cast('uint32_t', alliance_overlay.cursor_texture))
 
     for i = 6, 17 do
         if partyMgr:GetMemberIsActive(i) == 1 then
@@ -95,9 +92,9 @@ function alliance_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, c
                             end
                         end
 
-                        if texturePointer then
+                        if alliance_overlay.cursor.pointer then
                             local color = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorAlliance), contextAlpha)
-                            utils.draw_rotated_texture(drawList, texturePointer, screenX, screenY, cursorSize, heading, color)
+                            utils.draw_rotated_texture(drawList, alliance_overlay.cursor.pointer, screenX, screenY, cursorSize, heading, color)
                         end
                     end
                 end

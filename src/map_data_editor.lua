@@ -1,12 +1,23 @@
-local map_data_editor = {}
+local map_data_editor = {
+    bottom_left_icon = {},
+    bottom_right_icon = {},
+    top_right_icon = {},
+    top_left_icon = {},
+    left_icon = {},
+    right_icon = {},
+    bottom_icon = {},
+    top_icon = {},
+    height_bottom_icon = {},
+    height_top_icon = {},
+    camera_cursor = {}
+}
 
 local imgui = require('imgui')
 local map = require('src.map')
 local utils = require('src.utils')
 local world_drawing = require('src.world_drawing')
-local d3d8 = require('d3d8')
+local texture = require('src.texture')
 local ffi = require('ffi')
-local C = ffi.C
 local mem = ashita.memory
 
 ffi.cdef [[
@@ -28,57 +39,6 @@ local bounds_label_colors = {
     maxY = { 0.2, 0.6, 1.0, 1.0 },
     minX = { 1.0, 1.0, 0.2, 1.0 }
 }
-
-local function get_camera_cursor_texture_id()
-    if map_data_editor.camera_cursor_texture_id then
-        return map_data_editor.camera_cursor_texture_id
-    end
-
-    local d3d8dev = d3d8.get_device()
-    if not d3d8dev then
-        return nil
-    end
-
-    local imagePath = string.format('%saddons\\boussole\\assets\\camera.png', AshitaCore:GetInstallPath())
-    local texture_ptr = ffi.new('IDirect3DTexture8*[1]')
-    local hr = C.D3DXCreateTextureFromFileA(d3d8dev, imagePath, texture_ptr)
-    if hr ~= C.S_OK then
-        return nil
-    end
-
-    map_data_editor.camera_cursor_texture_id = tonumber(ffi.cast('uint32_t', texture_ptr[0]))
-    return map_data_editor.camera_cursor_texture_id
-end
-
-local function load_camera_button_texture(name)
-    local cache_key = 'camera_btn_' .. name
-    if map_data_editor[cache_key] ~= nil then
-        return map_data_editor[cache_key]
-    end
-
-    local d3d8dev = d3d8.get_device()
-    if not d3d8dev then
-        map_data_editor[cache_key] = false
-        return nil
-    end
-
-    local imagePath = string.format('%saddons\\boussole\\assets\\%s.png', AshitaCore:GetInstallPath(), name)
-    local texture_ptr = ffi.new('IDirect3DTexture8*[1]')
-    local hr = C.D3DXCreateTextureFromFileA(d3d8dev, imagePath, texture_ptr)
-    if hr ~= C.S_OK then
-        map_data_editor[cache_key] = false
-        return nil
-    end
-
-    local texId = tonumber(ffi.cast('uint32_t', texture_ptr[0]))
-    if not texId or texId == 0 then
-        map_data_editor[cache_key] = false
-        return nil
-    end
-
-    map_data_editor[cache_key] = texId
-    return texId
-end
 
 local function ensure_state()
     if not boussole.mapDataEditor then
@@ -887,19 +847,39 @@ function map_data_editor.draw_window()
                 end
 
                 local btnSize = 16
-                local bottomLeftIcon = load_camera_button_texture('bottom-left')
-                local bottomRightIcon = load_camera_button_texture('bottom-right')
-                local topRightIcon = load_camera_button_texture('top-right')
-                local topLeftIcon = load_camera_button_texture('top-left')
-                local leftIcon = load_camera_button_texture('left')
-                local rightIcon = load_camera_button_texture('right')
-                local bottomIcon = load_camera_button_texture('bottom')
-                local topIcon = load_camera_button_texture('top')
-                local heightBottomIcon = load_camera_button_texture('height-bottom')
-                local heightTopIcon = load_camera_button_texture('height-top')
+                if not map_data_editor.bottom_left_icon.texture then
+                    texture.load_texture('bottom-left', map_data_editor.bottom_left_icon)
+                end
+                if not map_data_editor.bottom_right_icon.texture then
+                    texture.load_texture('bottom-right', map_data_editor.bottom_right_icon)
+                end
+                if not map_data_editor.top_right_icon.texture then
+                    texture.load_texture('top-right', map_data_editor.top_right_icon)
+                end
+                if not map_data_editor.top_left_icon.texture then
+                    texture.load_texture('top-left', map_data_editor.top_left_icon)
+                end
+                if not map_data_editor.left_icon.texture then
+                    texture.load_texture('left', map_data_editor.left_icon)
+                end
+                if not map_data_editor.right_icon.texture then
+                    texture.load_texture('right', map_data_editor.right_icon)
+                end
+                if not map_data_editor.bottom_icon.texture then
+                    texture.load_texture('bottom', map_data_editor.bottom_icon)
+                end
+                if not map_data_editor.top_icon.texture then
+                    texture.load_texture('top', map_data_editor.top_icon)
+                end
+                if not map_data_editor.height_bottom_icon.texture then
+                    texture.load_texture('height-bottom', map_data_editor.height_bottom_icon)
+                end
+                if not map_data_editor.height_top_icon.texture then
+                    texture.load_texture('height-top', map_data_editor.height_top_icon)
+                end
 
-                if bottomLeftIcon then
-                    if imgui.ImageButton('##camBtnBottomLeft', bottomLeftIcon, { btnSize, btnSize }) then
+                if map_data_editor.bottom_left_icon.texture then
+                    if imgui.ImageButton('##camBtnBottomLeft', map_data_editor.bottom_left_icon.pointer, { btnSize, btnSize }) then
                         floorData.minX = camX
                         floorData.minY = camY
                         state.edit.minX[1] = camX
@@ -917,8 +897,8 @@ function map_data_editor.draw_window()
                     imgui.SetTooltip('Set MinX/MinY to camera position')
                 end
                 imgui.SameLine()
-                if bottomRightIcon then
-                    if imgui.ImageButton('##camBtnBottomRight', bottomRightIcon, { btnSize, btnSize }) then
+                if map_data_editor.bottom_right_icon.texture then
+                    if imgui.ImageButton('##camBtnBottomRight', map_data_editor.bottom_right_icon.pointer, { btnSize, btnSize }) then
                         floorData.maxX = camX
                         floorData.minY = camY
                         state.edit.maxX[1] = camX
@@ -936,8 +916,8 @@ function map_data_editor.draw_window()
                     imgui.SetTooltip('Set MaxX/MinY to camera position')
                 end
                 imgui.SameLine()
-                if topRightIcon then
-                    if imgui.ImageButton('##camBtnTopRight', topRightIcon, { btnSize, btnSize }) then
+                if map_data_editor.top_right_icon.texture then
+                    if imgui.ImageButton('##camBtnTopRight', map_data_editor.top_right_icon.pointer, { btnSize, btnSize }) then
                         floorData.maxX = camX
                         floorData.maxY = camY
                         state.edit.maxX[1] = camX
@@ -955,8 +935,8 @@ function map_data_editor.draw_window()
                     imgui.SetTooltip('Set MaxX/MaxY to camera position')
                 end
                 imgui.SameLine()
-                if topLeftIcon then
-                    if imgui.ImageButton('##camBtnTopLeft', topLeftIcon, { btnSize, btnSize }) then
+                if map_data_editor.top_left_icon.texture then
+                    if imgui.ImageButton('##camBtnTopLeft', map_data_editor.top_left_icon.pointer, { btnSize, btnSize }) then
                         floorData.minX = camX
                         floorData.maxY = camY
                         state.edit.minX[1] = camX
@@ -976,8 +956,8 @@ function map_data_editor.draw_window()
                 imgui.SameLine()
                 imgui.Dummy({ 4, 0 })
                 imgui.SameLine()
-                if leftIcon then
-                    if imgui.ImageButton('##camBtnLeft', leftIcon, { btnSize, btnSize }) then
+                if map_data_editor.left_icon.texture then
+                    if imgui.ImageButton('##camBtnLeft', map_data_editor.left_icon.pointer, { btnSize, btnSize }) then
                         floorData.minX = camX
                         state.edit.minX[1] = camX
                     end
@@ -991,8 +971,8 @@ function map_data_editor.draw_window()
                     imgui.SetTooltip('Set MinX to camera position')
                 end
                 imgui.SameLine()
-                if rightIcon then
-                    if imgui.ImageButton('##camBtnRight', rightIcon, { btnSize, btnSize }) then
+                if map_data_editor.right_icon.texture then
+                    if imgui.ImageButton('##camBtnRight', map_data_editor.right_icon.pointer, { btnSize, btnSize }) then
                         floorData.maxX = camX
                         state.edit.maxX[1] = camX
                     end
@@ -1006,8 +986,8 @@ function map_data_editor.draw_window()
                     imgui.SetTooltip('Set MaxX to camera position')
                 end
                 imgui.SameLine()
-                if bottomIcon then
-                    if imgui.ImageButton('##camBtnBottom', bottomIcon, { btnSize, btnSize }) then
+                if map_data_editor.bottom_icon.texture then
+                    if imgui.ImageButton('##camBtnBottom', map_data_editor.bottom_icon.pointer, { btnSize, btnSize }) then
                         floorData.minY = camY
                         state.edit.minY[1] = camY
                     end
@@ -1021,8 +1001,8 @@ function map_data_editor.draw_window()
                     imgui.SetTooltip('Set MinY to camera position')
                 end
                 imgui.SameLine()
-                if topIcon then
-                    if imgui.ImageButton('##camBtnTop', topIcon, { btnSize, btnSize }) then
+                if map_data_editor.top_icon.texture then
+                    if imgui.ImageButton('##camBtnTop', map_data_editor.top_icon.pointer, { btnSize, btnSize }) then
                         floorData.maxY = camY
                         state.edit.maxY[1] = camY
                     end
@@ -1038,8 +1018,8 @@ function map_data_editor.draw_window()
                 imgui.SameLine()
                 imgui.Dummy({ 4, 0 })
                 imgui.SameLine()
-                if heightBottomIcon then
-                    if imgui.ImageButton('##camBtnHeightBottom', heightBottomIcon, { btnSize, btnSize }) then
+                if map_data_editor.height_bottom_icon.texture then
+                    if imgui.ImageButton('##camBtnHeightBottom', map_data_editor.height_bottom_icon.pointer, { btnSize, btnSize }) then
                         floorData.minZ = camZ
                         state.edit.minZ[1] = camZ
                     end
@@ -1053,8 +1033,8 @@ function map_data_editor.draw_window()
                     imgui.SetTooltip('Set MinZ to camera height')
                 end
                 imgui.SameLine()
-                if heightTopIcon then
-                    if imgui.ImageButton('##camBtnHeightTop', heightTopIcon, { btnSize, btnSize }) then
+                if map_data_editor.height_top_icon.texture then
+                    if imgui.ImageButton('##camBtnHeightTop', map_data_editor.height_top_icon.pointer, { btnSize, btnSize }) then
                         floorData.maxZ = camZ
                         state.edit.maxZ[1] = camZ
                     end
@@ -1331,11 +1311,14 @@ function map_data_editor.draw_bounds(mapData, windowPosX, windowPosY, contentMin
             local screenX = windowPosX + contentMinX + mapOffsetX + texX * mapZoom
             local screenY = windowPosY + contentMinY + mapOffsetY + texY * mapZoom
 
-            local cursorId = get_camera_cursor_texture_id()
-            if cursorId then
+            if not map_data_editor.camera_cursor.texture then
+                texture.load_texture('camera', map_data_editor.camera_cursor)
+            end
+
+            if map_data_editor.camera_cursor.texture then
                 local cursorSize = boussole.config.iconSizePlayer[1] or 20.0
                 local halfSize = cursorSize / 2
-                drawList:AddImage(cursorId,
+                drawList:AddImage(map_data_editor.camera_cursor.pointer,
                     { screenX - halfSize, screenY - halfSize },
                     { screenX + halfSize, screenY + halfSize },
                     { 0, 0 }, { 1, 1 },

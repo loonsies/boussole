@@ -7,9 +7,7 @@ local utils = require('src.utils')
 local texture = require('src.texture')
 local ffi = require('ffi')
 
-player_overlay.cursor_texture = nil
-player_overlay.cursor_width = 0
-player_overlay.cursor_height = 0
+player_overlay.cursor = {}
 
 -- Draw player position
 function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
@@ -31,11 +29,11 @@ function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, con
     local playerZone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0)
     if (mapData.entry and mapData.entry.ZoneId ~= playerZone and not (mapData.entry._redirected and mapData.entry._originalZone == playerZone)) then return end
 
-    if not player_overlay.cursor_texture then
-        texture.load_cursor_texture(player_overlay)
+    if not player_overlay.cursor.texture then
+        texture.load_texture('cursor', player_overlay.cursor)
     end
 
-    if not player_overlay.cursor_texture then
+    if not player_overlay.cursor.texture then
         player_overlay.draw_dot(mapData, windowPosX, windowPosY, contentMinX, contentMinY, mapOffsetX, mapOffsetY, mapZoom, textureWidth, contextAlpha, contextLabels)
         return
     end
@@ -91,10 +89,9 @@ function player_overlay.draw(contextConfig, mapData, windowPosX, windowPosY, con
     end
 
     local drawList = imgui.GetWindowDrawList()
-    local texturePointer = tonumber(ffi.cast('uint32_t', player_overlay.cursor_texture))
     local color = utils.mul_alpha(utils.rgb_to_abgr(contextConfig.colorPlayer), contextAlpha)
-    if texturePointer then
-        utils.draw_rotated_texture(drawList, texturePointer, screenX, screenY, cursorSize, heading, color)
+    if player_overlay.cursor.pointer then
+        utils.draw_rotated_texture(drawList, player_overlay.cursor.pointer, screenX, screenY, cursorSize, heading, color)
     end
 end
 
