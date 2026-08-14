@@ -1,5 +1,5 @@
 local custom_points = {
-    reposition_state = nil -- { entry = point_entry } when a point is waiting for a new click
+    reposition_state = nil -- { entry = point_entry } when a point is waiting to be repositioned
 }
 
 local imgui = require('imgui')
@@ -442,7 +442,7 @@ function custom_points.delete_point()
         if parent_list and index then
             table.remove(parent_list, index)
             custom_points.save_custom_points()
-            
+
             if custom_points.reposition_state and custom_points.reposition_state.entry and custom_points.reposition_state.entry.id == custom_points.popup_state.pointId then
                 custom_points.reposition_state = nil
             end

@@ -15,48 +15,53 @@ ffi.cdef [[
 ]]
 
 local vertFormatMask = bit.bor(C.D3DFVF_XYZ, C.D3DFVF_DIFFUSE)
-local vertFormat = ffi.new('struct VertFormatXYZD')
+local vertFormat     = ffi.new('struct VertFormatXYZD')
+local vertSize       = ffi.sizeof(vertFormat)
 
-local function with_draw_state(options, func)
-    local d3d8dev = d3d.get_device()
-    if not d3d8dev then return end
+-- Pre-allocated reusable buffers
+local oldCull        = ffi.new('uint32_t[1]')
+local oldShader      = ffi.new('uint32_t[1]')
+local oldZWrite      = ffi.new('uint32_t[1]')
+local oldAlpha       = ffi.new('uint32_t[1]')
+local oldSrcBlend    = ffi.new('uint32_t[1]')
+local oldDestBlend   = ffi.new('uint32_t[1]')
+local identity       = ffi.new('D3DMATRIX', {
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+})
+local fallbackWorld  = ffi.new('D3DMATRIX', {
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+})
 
-    local opts = options or {}
+-- Pre-allocated vertex buffers
+local lineVerts      = ffi.new('struct VertFormatXYZD[2]')
+local boxVerts       = ffi.new('struct VertFormatXYZD[36]') -- 6 faces * 2 triangles * 3 verts
 
+local function set_vertex(vert, x, y, z, color)
+    vert.x = x
+    vert.y = z -- swap Y and Z
+    vert.z = y
+    vert.diffuse = color
+end
+
+local function begin_draw_state(d3d8dev, disableDepthWrite)
     local oldWorld = select(2, d3d8dev:GetTransform(C.D3DTS_WORLD))
+
     if not oldWorld then
-        oldWorld = ffi.new('D3DMATRIX', {
-            1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1
-        })
+        oldWorld = fallbackWorld
     end
 
-    local oldCull = ffi.new('uint32_t[1]')
     d3d8dev:GetRenderState(C.D3DRS_CULLMODE, oldCull)
-
-    local oldShader = ffi.new('uint32_t[1]')
     d3d8dev:GetVertexShader(oldShader)
-
-    local oldZWrite = ffi.new('uint32_t[1]')
     d3d8dev:GetRenderState(C.D3DRS_ZWRITEENABLE, oldZWrite)
-
-    local oldAlpha = ffi.new('uint32_t[1]')
     d3d8dev:GetRenderState(C.D3DRS_ALPHABLENDENABLE, oldAlpha)
-
-    local oldSrcBlend = ffi.new('uint32_t[1]')
     d3d8dev:GetRenderState(C.D3DRS_SRCBLEND, oldSrcBlend)
-
-    local oldDestBlend = ffi.new('uint32_t[1]')
     d3d8dev:GetRenderState(C.D3DRS_DESTBLEND, oldDestBlend)
-
-    local identity = ffi.new('D3DMATRIX', {
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-    })
 
     d3d8dev:SetTransform(C.D3DTS_WORLD, identity)
     d3d8dev:SetTexture(0, nil)
@@ -69,13 +74,15 @@ local function with_draw_state(options, func)
     d3d8dev:SetRenderState(C.D3DRS_SRCBLEND, C.D3DBLEND_SRCALPHA)
     d3d8dev:SetRenderState(C.D3DRS_DESTBLEND, C.D3DBLEND_INVSRCALPHA)
     d3d8dev:SetRenderState(C.D3DRS_LIGHTING, 0)
-    if opts.disableDepthWrite then
+    if disableDepthWrite then
         d3d8dev:SetRenderState(C.D3DRS_ZWRITEENABLE, 0)
     end
     d3d8dev:SetVertexShader(vertFormatMask)
 
-    func(d3d8dev)
+    return oldWorld
+end
 
+local function end_draw_state(d3d8dev, oldWorld)
     d3d8dev:SetVertexShader(oldShader[1])
     d3d8dev:SetRenderState(C.D3DRS_ALPHABLENDENABLE, oldAlpha[1])
     d3d8dev:SetRenderState(C.D3DRS_SRCBLEND, oldSrcBlend[1])
@@ -85,22 +92,23 @@ local function with_draw_state(options, func)
     d3d8dev:SetTransform(C.D3DTS_WORLD, oldWorld)
 end
 
-local function make_vertex(x, y, z, color)
-    return { x, z, y, color }
+function drawing:DrawLine(origin, destination, color)
+    local d3d8dev = d3d.get_device()
+    if not d3d8dev then return end
+
+    set_vertex(lineVerts[0], origin.X, origin.Y, origin.Z, color)
+    set_vertex(lineVerts[1], destination.X, destination.Y, destination.Z, color)
+
+    local oldWorld = begin_draw_state(d3d8dev, false)
+    d3d8dev:DrawPrimitiveUP(C.D3DPT_LINELIST, 1, lineVerts, vertSize)
+    end_draw_state(d3d8dev, oldWorld)
 end
 
-function drawing.DrawLine(self, origin, destination, color)
-    local vertices = ffi.new('struct VertFormatXYZD[2]', {
-        make_vertex(origin.X, origin.Y, origin.Z, color),
-        make_vertex(destination.X, destination.Y, destination.Z, color)
-    })
+function drawing:DrawBox(minX, minY, minZ, maxX, maxY, maxZ, colors)
+    local d3d8dev = d3d.get_device()
 
-    with_draw_state({}, function (dev)
-        dev:DrawPrimitiveUP(C.D3DPT_LINELIST, 1, vertices, ffi.sizeof(vertFormat))
-    end)
-end
+    if not d3d8dev then return end
 
-function drawing.DrawBox(self, minX, minY, minZ, maxX, maxY, maxZ, colors)
     local cMinY = colors and colors.minY or 0xFFFFFFFF
     local cMaxY = colors and colors.maxY or 0xFFFFFFFF
     local cMinX = colors and colors.minX or 0xFFFFFFFF
@@ -108,73 +116,64 @@ function drawing.DrawBox(self, minX, minY, minZ, maxX, maxY, maxZ, colors)
     local cMinZ = colors and colors.minZ or 0xFFFFFFFF
     local cMaxZ = colors and colors.maxZ or 0xFFFFFFFF
 
-    local p000 = { minX, minY, minZ }
-    local p100 = { maxX, minY, minZ }
-    local p110 = { maxX, maxY, minZ }
-    local p010 = { minX, maxY, minZ }
-    local p001 = { minX, minY, maxZ }
-    local p101 = { maxX, minY, maxZ }
-    local p111 = { maxX, maxY, maxZ }
-    local p011 = { minX, maxY, maxZ }
+    local i = 0
 
-    local verts = {
-        -- minY face
-        make_vertex(p000[1], p000[2], p000[3], cMinY),
-        make_vertex(p100[1], p100[2], p100[3], cMinY),
-        make_vertex(p101[1], p101[2], p101[3], cMinY),
-        make_vertex(p000[1], p000[2], p000[3], cMinY),
-        make_vertex(p101[1], p101[2], p101[3], cMinY),
-        make_vertex(p001[1], p001[2], p001[3], cMinY),
-
-        -- maxY face
-        make_vertex(p010[1], p010[2], p010[3], cMaxY),
-        make_vertex(p111[1], p111[2], p111[3], cMaxY),
-        make_vertex(p110[1], p110[2], p110[3], cMaxY),
-        make_vertex(p010[1], p010[2], p010[3], cMaxY),
-        make_vertex(p011[1], p011[2], p011[3], cMaxY),
-        make_vertex(p111[1], p111[2], p111[3], cMaxY),
-
-        -- minX face
-        make_vertex(p000[1], p000[2], p000[3], cMinX),
-        make_vertex(p001[1], p001[2], p001[3], cMinX),
-        make_vertex(p011[1], p011[2], p011[3], cMinX),
-        make_vertex(p000[1], p000[2], p000[3], cMinX),
-        make_vertex(p011[1], p011[2], p011[3], cMinX),
-        make_vertex(p010[1], p010[2], p010[3], cMinX),
-
-        -- maxX face
-        make_vertex(p100[1], p100[2], p100[3], cMaxX),
-        make_vertex(p110[1], p110[2], p110[3], cMaxX),
-        make_vertex(p111[1], p111[2], p111[3], cMaxX),
-        make_vertex(p100[1], p100[2], p100[3], cMaxX),
-        make_vertex(p111[1], p111[2], p111[3], cMaxX),
-        make_vertex(p101[1], p101[2], p101[3], cMaxX),
-
-        -- minZ face
-        make_vertex(p000[1], p000[2], p000[3], cMinZ),
-        make_vertex(p010[1], p010[2], p010[3], cMinZ),
-        make_vertex(p110[1], p110[2], p110[3], cMinZ),
-        make_vertex(p000[1], p000[2], p000[3], cMinZ),
-        make_vertex(p110[1], p110[2], p110[3], cMinZ),
-        make_vertex(p100[1], p100[2], p100[3], cMinZ),
-
-        -- maxZ face
-        make_vertex(p001[1], p001[2], p001[3], cMaxZ),
-        make_vertex(p101[1], p101[2], p101[3], cMaxZ),
-        make_vertex(p111[1], p111[2], p111[3], cMaxZ),
-        make_vertex(p001[1], p001[2], p001[3], cMaxZ),
-        make_vertex(p111[1], p111[2], p111[3], cMaxZ),
-        make_vertex(p011[1], p011[2], p011[3], cMaxZ)
-    }
-
-    local vertices = ffi.new('struct VertFormatXYZD[?]', #verts)
-    for i = 1, #verts do
-        vertices[i - 1] = ffi.new('struct VertFormatXYZD', verts[i])
+    local function v(x, y, z, c)
+        set_vertex(boxVerts[i], x, y, z, c)
+        i = i + 1
     end
 
-    with_draw_state({ disableDepthWrite = true }, function (dev)
-        dev:DrawPrimitiveUP(C.D3DPT_TRIANGLELIST, #verts / 3, vertices, ffi.sizeof(vertFormat))
-    end)
+    -- minY face
+    v(minX, minY, minZ, cMinY)
+    v(maxX, minY, minZ, cMinY)
+    v(maxX, minY, maxZ, cMinY)
+    v(minX, minY, minZ, cMinY)
+    v(maxX, minY, maxZ, cMinY)
+    v(minX, minY, maxZ, cMinY)
+
+    -- maxY face
+    v(minX, maxY, minZ, cMaxY)
+    v(maxX, maxY, maxZ, cMaxY)
+    v(maxX, maxY, minZ, cMaxY)
+    v(minX, maxY, minZ, cMaxY)
+    v(minX, maxY, maxZ, cMaxY)
+    v(maxX, maxY, maxZ, cMaxY)
+
+    -- minX face
+    v(minX, minY, minZ, cMinX)
+    v(minX, minY, maxZ, cMinX)
+    v(minX, maxY, maxZ, cMinX)
+    v(minX, minY, minZ, cMinX)
+    v(minX, maxY, maxZ, cMinX)
+    v(minX, maxY, minZ, cMinX)
+
+    -- maxX face
+    v(maxX, minY, minZ, cMaxX)
+    v(maxX, maxY, minZ, cMaxX)
+    v(maxX, maxY, maxZ, cMaxX)
+    v(maxX, minY, minZ, cMaxX)
+    v(maxX, maxY, maxZ, cMaxX)
+    v(maxX, minY, maxZ, cMaxX)
+
+    -- minZ face
+    v(minX, minY, minZ, cMinZ)
+    v(minX, maxY, minZ, cMinZ)
+    v(maxX, maxY, minZ, cMinZ)
+    v(minX, minY, minZ, cMinZ)
+    v(maxX, maxY, minZ, cMinZ)
+    v(maxX, minY, minZ, cMinZ)
+
+    -- maxZ face
+    v(minX, minY, maxZ, cMaxZ)
+    v(maxX, minY, maxZ, cMaxZ)
+    v(maxX, maxY, maxZ, cMaxZ)
+    v(minX, minY, maxZ, cMaxZ)
+    v(maxX, maxY, maxZ, cMaxZ)
+    v(minX, maxY, maxZ, cMaxZ)
+
+    local oldWorld = begin_draw_state(d3d8dev, true)
+    d3d8dev:DrawPrimitiveUP(C.D3DPT_TRIANGLELIST, 12, boxVerts, vertSize)
+    end_draw_state(d3d8dev, oldWorld)
 end
 
 return drawing

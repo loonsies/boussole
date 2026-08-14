@@ -1287,7 +1287,7 @@ local function draw_misc_tab(selZoneId)
                 lastCopiedAt = 0
             }
         else
-            boussole.mapDataEditor.visible[1] = true
+            boussole.mapDataEditor.visible[1] = not boussole.mapDataEditor.visible[1]
         end
     end
     if imgui.IsItemHovered() then

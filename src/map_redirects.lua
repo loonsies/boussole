@@ -62,12 +62,12 @@ function map_redirects.draw_window()
                 end
             end
 
-            local filter = string.lower(ffi.string(searchState[1]))
+            local filter = string.lower(searchState[1])
             imgui.SetNextItemWidth(-50)
             if imgui.BeginCombo(label, comboPreview) then
                 imgui.SetNextItemWidth(-1)
                 imgui.InputText('##Search' .. label, searchState, 256)
-                filter = string.lower(ffi.string(searchState[1]))
+                filter = string.lower(searchState[1])
                 imgui.Separator()
 
                 if imgui.BeginChild('##List' .. label, { 0, 150 }) then
