@@ -2,7 +2,6 @@ local ui = {}
 
 local imgui = require('imgui')
 local utils = require('src.utils')
-local chat = require('chat')
 local settings = require('settings')
 local map = require('src.map')
 local texture = require('src.texture')
